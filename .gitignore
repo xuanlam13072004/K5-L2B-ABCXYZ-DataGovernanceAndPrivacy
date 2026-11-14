@@ -37,3 +37,4 @@ __pycache__/
 .idea/
 .vscode/
 data/t03_real/
+data/gold/
