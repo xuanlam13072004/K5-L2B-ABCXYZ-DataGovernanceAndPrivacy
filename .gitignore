@@ -5,6 +5,10 @@
 # Real data downloaded from Hugging Face (contains real people / plates; license-restricted)
 data/real/
 data/cache/
+data/synthetic_dev/
+data/custom_synthetic/
+data/cvat_export/
+models/
 
 # Instructor-only material (ground truth, generators, hidden eval) lives in the private
 # instructor repo and is copied in as an overlay — never commit it here

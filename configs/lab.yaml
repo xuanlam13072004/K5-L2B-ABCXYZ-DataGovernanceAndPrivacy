@@ -6,7 +6,7 @@ group_id: G01                                # e.g. G01
 owner: "Member 1 (Lead / Integrator)"        # mandatory for every Decision
 track_config: tracks/t03.yaml                # Track T03: Synthetic-vs-Real
 track: t03                                   # must match track_config
-input: fixtures/t03_synthetic                # fixtures directory for T03
+input: data/image                            # custom dataset directory
 output: out/
 seed: 42
 offline: true                                # demo/eval must not touch the network
