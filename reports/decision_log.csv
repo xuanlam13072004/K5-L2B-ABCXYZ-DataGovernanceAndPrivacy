@@ -1,0 +1,3 @@
+ts,scope,status,canonical,reason_code,reason,owner,evidence
+2026-11-14T10:01:42+00:00,t03 holdout_transformed,HOLD,HOLD,MISSING_PROVENANCE_MANIFEST,Transform manifest is missing or empty: synthetic images cannot be traced to their parents.,Member 1 (Lead / Integrator),out\poc\qc.csv;out\poc\transform_manifest.csv
+2026-11-14T10:10:57+00:00,t03 holdout_transformed,HOLD,HOLD,MISSING_PROVENANCE_MANIFEST,Transform manifest is missing or empty: synthetic images cannot be traced to their parents.,Member 1 (Lead / Integrator),out\poc\qc.csv;out\poc\transform_manifest.csv;out\poc\review_queue_reviewed.csv

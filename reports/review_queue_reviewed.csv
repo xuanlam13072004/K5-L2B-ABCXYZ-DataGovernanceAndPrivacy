@@ -1,0 +1,11 @@
+rank,item_id,score,reason,suggested_action,slice,evidence_path,reviewer,reviewer_decision,override_value,review_note,reviewed_at
+1,hold_000,0.0,placeholder,,,holdout_transformed/hold_000.jpg,Nguyen Binh Anh,approve,,clear visibility,2026-11-14T10:09:13.052Z
+2,hold_001,0.0,placeholder,,,holdout_transformed/hold_001.jpg,Nguyen Binh Anh,edit,1,glare completely obscures traffic sign,2026-11-14T10:09:13.052Z
+3,hold_002,0.0,placeholder,,,holdout_transformed/hold_002.jpg,Nguyen Binh Anh,approve,,clear visibility,2026-11-14T10:09:13.052Z
+4,hold_003,0.0,placeholder,,,holdout_transformed/hold_003.jpg,Nguyen Binh Anh,approve,,clear visibility,2026-11-14T10:09:13.052Z
+5,hold_004,0.0,placeholder,,,holdout_transformed/hold_004.jpg,Nguyen Binh Anh,edit,1,blue car object erased inside bounding box,2026-11-14T10:09:13.052Z
+6,hold_005,0.0,placeholder,,,holdout_transformed/hold_005.jpg,Nguyen Binh Anh,approve,,objects clearly visible in night transform,2026-11-14T10:09:13.052Z
+7,hold_006,0.0,placeholder,,,holdout_transformed/hold_006.jpg,Nguyen Binh Anh,edit,1,glare completely obscures traffic sign,2026-11-14T10:09:13.052Z
+8,hold_007,0.0,placeholder,,,holdout_transformed/hold_007.jpg,Nguyen Binh Anh,approve,,"minor fog, all objects remain recognizable",2026-11-14T10:09:13.052Z
+9,hold_008,0.0,placeholder,,,holdout_transformed/hold_008.jpg,Nguyen Binh Anh,approve,,"slight blur, all objects remain clearly visible",2026-11-14T10:09:13.052Z
+10,hold_009,0.0,placeholder,,,holdout_transformed/hold_009.jpg,Nguyen Binh Anh,approve,,"night transform, all objects remain recognizable",2026-11-14T10:09:13.052Z
