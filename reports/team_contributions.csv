@@ -4,4 +4,4 @@ Member 2,,,Data Governance & Provenance,fixtures/t03_synthetic/; tools/verify_ma
 Member 3,,,Synthetic Generator & Baseline,src/common/corruptions.py; src/pipeline_baseline.py,,Synthetic dev generation & baseline evaluation,
 Member 4,,,Quality Gate Algorithm (Core PoC),src/pipeline.py (process); src/common/image_ops.py,,Glare/Erase detection & F1 optimization,
 Member 5,,,Human-in-the-Loop & Decision Policy,src/pipeline.py (rank/review/decide); src/common/review.py; src/common/contact_sheet.py; src/common/decision.py,,Review queue & offline contact sheet & audit log,
-Member 6,maawongf,maawongf@gmail.com,QA Benchmarking & Reporting,tests/test_t03.py; reports/group_report.md; reports/metric_contract.md; demo/,,Automated tests, metric contract, group report and demo slides; no commit SHA in current worktree,yes
+Member 6,maawongf,maawongf@gmail.com,QA Benchmarking & Reporting,tests/test_t03.py; reports/group_report.md; reports/metric_contract.md; demo/,e0b7c45,Automated tests, metric contract, group report and demo slides,yes

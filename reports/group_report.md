@@ -109,9 +109,9 @@ Môi trường: Python 3.13.14, Windows 11. `python -m pytest -q tests/test_t03.
 | M3 | Generator và baseline; generator hiện còn TODO |
 | M4 | Quality gate `src/t03/qc.py` |
 | M5 | Review flow, contact sheet, decision |
-| M6 | Tests T03, metric contract, báo cáo, slide demo; author theo Git config hiện tại là `maawongf <maawongf@gmail.com>`; commit SHA chưa có vì thay đổi đang ở working tree |
+| M6 | Tests T03, metric contract, báo cáo, slide demo; Git author `maawongf <maawongf@gmail.com>`; commit deliverable `e0b7c45` |
 
-Không gán tên thật hoặc email Git cho M1–M5 khi tài liệu chưa ánh xạ danh tính. Bảng đóng góp để ở [team_contributions.csv](team_contributions.csv); cần cập nhật SHA sau khi commit và xác nhận mapping tác giả còn thiếu.
+Không gán tên thật hoặc email Git cho M1–M5 khi tài liệu chưa ánh xạ danh tính. SHA của commit M6 được ghi trong [team_contributions.csv](team_contributions.csv); các mapping còn thiếu cần nhóm bổ sung.
 
 ## 11 · Tài liệu tham chiếu
 
