@@ -1,0 +1,2 @@
+step_name,entity_type,source_path,output_path,sha256_checksum,agent,timestamp,provenance_completeness,standard_compliance
+t03_data_governance_validation,DerivedArtifact,fixtures/t03_synthetic/manifest.csv,out/transform_manifest.csv,verified_ok,Member 2 - Data Governance Specialist,2026-11-14T16:55:28.253969,100%,PROV-O / Croissant
