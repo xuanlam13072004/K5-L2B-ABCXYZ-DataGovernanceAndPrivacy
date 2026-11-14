@@ -1,0 +1,136 @@
+"""Turn the team's 30 labelled road images into a T03 input folder (same layout as fixtures/t03_synthetic).
+
+    python -m tools.import_team_labels                      # -> data/t03_real/
+    python -m src.main --config configs/lab.yaml --input data/t03_real --output out/real --run-name real --offline --seed 42
+
+Input : data/image/*.jpg  +  data/obj_train_data.zip (CVAT "YOLO 1.1" export: obj.names + obj_train_data/*.txt)
+Output: data/t03_real/originals/orig_XX.jpg, originals.csv, objects.csv, label_fixes.csv, source_map.csv, manifest.csv
+
+Label clean-up rules (frozen; every removed box is written to label_fixes.csv with its reason):
+  * class mapping to the fixture taxonomy:  car/truck/bus -> car, person -> pedestrian,
+    stop sign / traffic light -> sign  (original YOLO class kept in column `orig_class`)
+  * classes outside the mapping are dropped (YOLO false positives, e.g. train, potted plant)
+  * ego-vehicle hood: a box wider than 90% of the image that reaches the bottom 5% -> dropped
+  * duplicates: same mapped class and IoU >= 0.8 in the same image -> keep the first
+Split: 20 dev / 10 holdout, shuffled with --seed (deterministic).
+"""
+from __future__ import annotations
+
+import argparse
+import shutil
+import sys
+import zipfile
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from PIL import Image
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from src.common.manifest import build_manifest, write_manifest  # noqa: E402
+
+CLASS_MAP = {"car": "car", "truck": "car", "bus": "car", "person": "pedestrian",
+             "stop sign": "sign", "traffic light": "sign"}
+SOURCE = "team G01 dashcam images (data/image) + CVAT YOLO 1.1 labels (data/obj_train_data.zip)"
+LICENSE = "TODO: ghi nguon goc + giay phep cua 30 anh (vd. BDD100K licence: non-commercial research)"
+
+
+def _iou(a, b) -> float:
+    ax2, ay2, bx2, by2 = a[0] + a[2], a[1] + a[3], b[0] + b[2], b[1] + b[3]
+    iw, ih = max(0.0, min(ax2, bx2) - max(a[0], b[0])), max(0.0, min(ay2, by2) - max(a[1], b[1]))
+    inter = iw * ih
+    union = a[2] * a[3] + b[2] * b[3] - inter
+    return inter / union if union > 0 else 0.0
+
+
+def read_yolo_zip(zip_path: Path) -> tuple[list[str], dict[str, list[list[str]]]]:
+    with zipfile.ZipFile(zip_path) as z:
+        names = [l.strip() for l in z.read("obj.names").decode("utf-8").splitlines() if l.strip()]
+        labels = {}
+        for n in z.namelist():
+            if n.startswith("obj_train_data/") and n.endswith(".txt"):
+                rows = [l.split() for l in z.read(n).decode("utf-8").splitlines() if l.strip()]
+                labels[Path(n).stem] = rows
+    return names, labels
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--images", default=str(ROOT / "data" / "image"))
+    ap.add_argument("--labels-zip", default=str(ROOT / "data" / "obj_train_data.zip"))
+    ap.add_argument("--out", default=str(ROOT / "data" / "t03_real"))
+    ap.add_argument("--n-holdout", type=int, default=10)
+    ap.add_argument("--seed", type=int, default=42)
+    a = ap.parse_args(argv)
+
+    img_dir, out = Path(a.images), Path(a.out)
+    if not Path(a.labels_zip).exists():
+        print(f"[labels] not found: {a.labels_zip}", file=sys.stderr)
+        return 2
+    names, labels = read_yolo_zip(Path(a.labels_zip))
+    stems = sorted((p.stem for p in img_dir.glob("*.jpg")), key=lambda s: int(s))
+    missing = [s for s in stems if s not in labels]
+    if missing:
+        print(f"[labels] images without a label file: {missing}", file=sys.stderr)
+        return 2
+
+    order = np.random.default_rng(a.seed).permutation(len(stems))
+    holdout = {stems[i] for i in order[: a.n_holdout]}
+
+    if out.exists():
+        shutil.rmtree(out)
+    (out / "originals").mkdir(parents=True)
+    originals, objects, fixes, source = [], [], [], []
+    for k, stem in enumerate(stems):
+        iid = f"orig_{k:02d}"
+        src = img_dir / f"{stem}.jpg"
+        shutil.copyfile(src, out / "originals" / f"{iid}.jpg")
+        W, H = Image.open(src).size
+        split = "holdout" if stem in holdout else "dev"
+        originals.append({"image_id": iid, "path": f"originals/{iid}.jpg", "split": split})
+        source.append({"image_id": iid, "source_file": f"data/image/{stem}.jpg", "label_file": f"obj_train_data/{stem}.txt",
+                       "width": W, "height": H})
+        kept: list[dict] = []
+        for j, r in enumerate(labels[stem]):
+            cid = int(r[0])
+            orig_cls = names[cid] if cid < len(names) else f"class_{cid}"
+            xc, yc, w, h = (float(v) for v in r[1:5])
+            box = [round((xc - w / 2) * W, 2), round((yc - h / 2) * H, 2), round(w * W, 2), round(h * H, 2)]
+            row = {"image_id": iid, "source_file": f"{stem}.jpg", "line": j + 1, "orig_class": orig_cls,
+                   "x": box[0], "y": box[1], "w": box[2], "h": box[3]}
+            if orig_cls not in CLASS_MAP:
+                fixes.append({**row, "reason": "class_not_in_taxonomy (YOLO false positive)"})
+                continue
+            if w > 0.9 and yc + h / 2 > 0.95:
+                fixes.append({**row, "reason": "ego_vehicle_hood"})
+                continue
+            cls = CLASS_MAP[orig_cls]
+            dup = next((k2 for k2 in kept if k2["class"] == cls and _iou(box, [k2["x"], k2["y"], k2["w"], k2["h"]]) >= 0.8), None)
+            if dup is not None:
+                fixes.append({**row, "reason": f"duplicate_of {dup['obj_id']} (IoU>=0.8)"})
+                continue
+            kept.append({"image_id": iid, "obj_id": f"{iid}_o{len(kept)}", "class": cls,
+                         "x": box[0], "y": box[1], "w": box[2], "h": box[3], "orig_class": orig_cls})
+        objects.extend(kept)
+
+    cols = ["image_id", "obj_id", "class", "x", "y", "w", "h", "orig_class"]
+    pd.DataFrame(originals).to_csv(out / "originals.csv", index=False)
+    pd.DataFrame(objects, columns=cols).to_csv(out / "objects.csv", index=False)
+    pd.DataFrame(fixes, columns=["image_id", "source_file", "line", "orig_class", "x", "y", "w", "h", "reason"]).to_csv(
+        out / "label_fixes.csv", index=False)
+    pd.DataFrame(source).to_csv(out / "source_map.csv", index=False)
+    files = [o["path"] for o in originals] + ["originals.csv", "objects.csv", "label_fixes.csv", "source_map.csv"]
+    split_map = {o["path"]: o["split"] for o in originals}
+    write_manifest(build_manifest(out, files, SOURCE, LICENSE, split=split_map), out / "manifest.csv")
+
+    obj = pd.DataFrame(objects)
+    print(f"[labels] {len(originals)} images ({len(originals) - len(holdout)} dev / {len(holdout)} holdout) -> {out}")
+    print(f"         kept {len(obj)} boxes: {obj['class'].value_counts().to_dict()}")
+    print(f"         removed {len(fixes)} boxes -> label_fixes.csv")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
