@@ -11,14 +11,14 @@
 | Positive | `unusable = 1` theo `fixtures/t03_synthetic/README_usability_rule.md` |
 | Công thức | TP: GT unusable và dự đoán 1; FP: GT usable, dự đoán 1; FN: GT unusable, dự đoán 0. Precision = TP/(TP+FP), recall = TP/(TP+FN), F1 = 2TP/(2TP+FP+FN). Khi mẫu số metric bằng 0, evaluator trả `None` nếu không xác định được metric. |
 | Ghép prediction ↔ GT | Join chính xác trên `image_id`; ID lặp trong `qc.csv` làm evaluator thất bại. Prediction thiếu bị tính là usable (0), theo evaluator. |
-| Candidate pool | Cố định: toàn bộ 45 ID trong `fixtures/t03_synthetic/holdout_transformed.csv`; không lọc theo score. |
+| Candidate pool | Chính thức: 45 ID fixture (chưa có GT overlay). Benchmark nội bộ: 130 ID trong `out/member6/gold/team_holdout/holdout_transformed.csv`, từ 10 ảnh holdout nguồn nhóm; không lọc theo score. |
 | Review budget | B = 10 ảnh nghi ngờ cao nhất cho HITL; B không thay đổi primary metric. |
 | Seed | 42 |
-| Threshold policy | Dùng `params.thresholds` trong `configs/lab.yaml` (các giá trị mặc định tương ứng ở `configs/tracks/t03.yaml`); không điều chỉnh sau khi xem holdout. Tài liệu yêu cầu tuning trên dev gold, nhưng dev gold chưa có trong checkout nên hiện chưa xác nhận các ngưỡng là dev-tuned. |
-| Eval split | `holdout_transformed` (10 ảnh gốc holdout, 45 biến thể). Không dùng split này để chọn ngưỡng. |
+| Threshold policy | Dùng nguyên `params.thresholds` trong `configs/lab.yaml` và mặc định `src/t03/qc.py`; không điều chỉnh sau khi xem benchmark. Chưa xác nhận các ngưỡng đã được tune trên dev độc lập. |
+| Eval split | Nội bộ: importer chia 30 ảnh nhóm thành 20 dev/10 holdout bằng seed 42; chỉ 10 holdout sinh 130 biến thể. Chính thức: 45 fixture holdout, chưa chấm. Không dùng các split này chọn ngưỡng. |
 | Chỉ số lỗi xấu | Missed label-invalidating edits (đặc biệt `erase`); đồng thời báo precision/recall để thể hiện false alarm và false reject. |
-| Slices | `transform` và `severity` theo GT; evaluator hiện xuất slice theo `transform`. Severity slice sẽ được bổ sung sau khi có GT overlay, không suy đoán từ tên ảnh. |
-| Bất định khi N nhỏ | Báo khoảng tin cậy 95% bằng bootstrap theo cụm `parent_image` (2.000 lần lấy mẫu, seed 42) khi GT sẵn có; nhóm biến thể cùng ảnh gốc không được xem là độc lập. CI chưa tính trong checkout này. |
+| Slices | `transform` và `severity` theo GT sinh độc lập, ghi trong `reports/t03_benchmark_details.md`; evaluator chuẩn xuất transform slices. |
+| Bất định khi N nhỏ | Đã bootstrap theo cụm `parent_image`, 2.000 lần, seed 42, CI95 trong chi tiết benchmark. Biến thể cùng parent không xem là độc lập; CI không đo bias chọn mẫu hoặc sim-to-real. |
 | Chốt / người chốt | 2026-11-14 · Member 6 (bản khai; phê duyệt nhóm chưa ghi nhận). |
 
 ## Định nghĩa unusable đã khóa
@@ -30,9 +30,10 @@
 Chấm từng run bằng evaluator chuẩn rồi tạo bảng, không nhập số thủ công:
 
 ```bash
-python -m src.evaluate --track t03 --pred out/baseline/qc.csv --run-name baseline --out reports/metrics_baseline.json
-python -m src.evaluate --track t03 --pred out/poc/qc.csv --run-name poc --out reports/metrics_poc.json
-python -m src.compare reports/metrics_baseline.json reports/metrics_poc.json --out reports/table1_baseline_vs_poc.md
+python -m src.evaluate --track t03 --gt out/member6/gold/team_holdout_gt.csv --pred out/member6/baseline/qc.csv --run-name baseline --out reports/metrics_baseline.json
+python -m src.evaluate --track t03 --gt out/member6/gold/team_holdout_gt.csv --pred out/member6/poc/qc.csv --run-name poc --out reports/metrics_poc.json
+python -X utf8 -m src.compare reports/metrics_baseline.json reports/metrics_poc.json --out reports/table1_baseline_vs_poc.md
+python -m tools.summarize_t03_benchmark
 ```
 
-Nếu baseline bằng 0, ghi `baseline=0` như `src.compare` quy định; không báo phần trăm cải thiện không xác định. Trong checkout hiện tại, GT overlay và output run chưa sẵn có; vì vậy chưa có benchmark score có thể tái lập.
+Nếu baseline bằng 0, ghi `baseline=0` như `src.compare` quy định. Benchmark nội bộ đã chạy từ bbox GT trong ZIP và công cụ `tools.make_gold_set`; xem lệnh dựng dữ liệu ở `group_report.md`. Nhãn usability suy từ phép biến đổi, không phải nhãn hidden fixture hay GT thời tiết tự nhiên. GT nằm ngoài thư mục input pipeline; pipeline không đọc nó. Các ngưỡng giữ nguyên trước và sau benchmark.

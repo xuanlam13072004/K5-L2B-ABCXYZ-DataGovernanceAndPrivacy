@@ -9,7 +9,7 @@
 
 ## Slide 2 — Contract dữ liệu và metric
 
-- Fixture CC0 synthetic: 30 ảnh gốc (20 dev, 10 holdout), 45 ảnh holdout transformed; seed 42.
+- Nội bộ: 30 ảnh thật + bbox YOLO từ ZIP; chia 20 dev/10 holdout, sinh 130 biến thể từ 10 holdout; seed 42. GT fixture chính thức vẫn chưa có.
 - Positive = unusable theo rule đã chốt: severity 2, glare trên bbox, hoặc erase nhưng nhãn còn.
 - Primary: Transform QC F1, join chính xác bằng `image_id`; báo precision, recall và lỗi erase.
 - **Nói:** “Không lấy ảnh biến thể cùng parent làm các mẫu độc lập khi tính bất định.”
@@ -24,21 +24,22 @@
 ## Slide 4 — Bằng chứng, giới hạn và bước kế tiếp
 
 - Tests M6: 4 test file `tests/test_t03.py` pass; full suite hiện có 17 failure do hash manifest và strict provenance.
-- Hai rủi ro cần đo trên heldout: erase cục bộ bị bỏ lọt; flare lệch tâm/clipping làm sai quyết định bbox.
-- **Chưa có F1 baseline/PoC:** learner checkout không có GT overlay; generator dev hiện trả rỗng nên manifest provenance không được tạo.
-- Không tuyên bố sim-to-real hoặc sẵn sàng production từ fixture synthetic.
-- **Nói:** “Bước kế tiếp là hoàn thành generator/dev gold, nhận GT overlay từ giảng viên, sau đó chạy hai evaluator cùng seed và xuất bảng bằng `src.compare`.”
+- **F1 nội bộ:** baseline 0.5567 → PoC 0.7619 (130 ảnh); bảng do src.compare sinh.
+- PoC bỏ lọt 10 blur severity 2 và 10 erase; ví dụ g0011/g0012 trên parent orig_05. Ngưỡng blur quá chặt; inpainting không tạo bbox đồng màu như detector giả định.
+- Pipeline **HOLD** vì manifest provenance rỗng; chưa có human review hay đánh giá thời tiết thật.
+- **Nói:** “Bước kế tiếp là xử lý lỗi trên dev độc lập, hoàn thiện provenance và đánh giá mới; không đổi ngưỡng trên chính bộ heldout vừa chấm.”
 
 ## Kịch bản phản biện nhanh
 
-**Hỏi:** Vì sao chưa báo F1?  
-**Đáp:** GT holdout là instructor-only và không có trong checkout; hai metrics JSON cũng chưa có. Tự suy ra nhãn từ ảnh sẽ làm benchmark không độc lập.
+**Hỏi:** Đây có phải điểm hidden eval chính thức không?
+
+**Đáp:** Đây là benchmark nội bộ: bbox GT của nhóm kết hợp phép biến đổi biết trước sinh nhãn usability. GT hidden fixture vẫn do giảng viên giữ; hai bộ không được gộp.
 
 **Hỏi:** Ngưỡng đã tối ưu chưa?  
-**Đáp:** Contract khóa ngưỡng hiện có trong config. Repo chưa có dev gold được sinh để xác nhận tuning; không tuyên bố ngưỡng tối ưu và không tune trên holdout.
+**Đáp:** Ngưỡng config giữ nguyên trước và sau benchmark; kết quả blur/erase cho thấy cần thử lại trên dev độc lập. Không dùng bộ vừa chấm để tune rồi báo lại như holdout mới.
 
 **Hỏi:** Tại sao cần reviewer nếu có quality gate?  
 **Đáp:** Rule ảnh có thể miss glare/erase ngoài các giả định đã mã hóa. Queue và audit lưu lại override, còn thiếu provenance thì HOLD.
 
 **Hỏi:** Có thể đưa lên ảnh camera thật không?  
-**Đáp:** Chưa. Chỉ có fixture synthetic; cần dataset thật có quyền sử dụng, protocol gán nhãn và đánh giá downstream trước khi cân nhắc.
+**Đáp:** Đã chạy trên ảnh gốc thật nhưng nhiễu/thời tiết vẫn synthetic. Cần xác nhận license, review bbox và kiểm trên thời tiết tự nhiên/downstream trước khi cân nhắc triển khai.

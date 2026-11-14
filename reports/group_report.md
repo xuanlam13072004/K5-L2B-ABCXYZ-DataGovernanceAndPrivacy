@@ -1,122 +1,121 @@
 # Báo cáo nhóm — Day 06 Data Lab · T03 Synthetic-vs-Real
 
-> Bản báo cáo dựa trên fixture, config, source và log đang có trong checkout ngày 2026-11-14. Không điền điểm benchmark khi không có GT/eval output để tái lập.
+> Benchmark nội bộ ngày 2026-11-14 dùng bbox GT trong data/obj_train_data.zip và ảnh data/image. Nhãn usability được sinh độc lập bằng tools.make_gold_set theo rule T03; điểm này không phải điểm hidden evaluation của giảng viên.
 
 ## 00 · Thông tin nhóm
 
 | Mục | Giá trị |
 |---|---|
-| Group ID | G01 (`configs/lab.yaml`) |
-| Challenge | T03 · Synthetic-vs-Real: tạo và kiểm dữ liệu khó |
-| Thành viên / vai trò | M1 Tech Lead & Pipeline Integrator · M2 Data Governance & Provenance · M3 Synthetic Generator & Baseline · M4 Quality Gate Algorithm · M5 Human-in-the-Loop & Decision · M6 QA, Benchmarking & Reporting |
-| Tên thành viên | Chưa có trong tài liệu được cung cấp; đang dùng mã M1–M6 |
-| Git URL | Chưa ghi trong report; checkout có remote `origin` |
-| Tag `demo-180m` / `final-24h` | Chưa có tag trong checkout hiện tại |
-| Deadline | Mốc +24h theo role assignment; thời điểm cụ thể chưa được cung cấp |
-| Ngày lập | 2026-11-14 |
+| Group ID | G01 (configs/lab.yaml) |
+| Challenge | T03 · Synthetic-vs-Real |
+| Vai trò | M1 Integration · M2 Data/Provenance · M3 Generator/Baseline · M4 QC · M5 HITL · M6 QA/Benchmark/Report |
+| Tên thật / Git URL / deadline cụ thể | Chưa khai báo trong tài liệu nhóm |
+| Tag demo-180m / final-24h | Chưa có trong checkout |
+| M6 | Git author maawongf; commit deliverables ban đầu e0b7c45; bảng đóng góp: team_contributions.csv |
 
-## 01 · Bài toán và tiêu chí quyết định
+## 01 · Bài toán và quyết định
 
-- **Ai chịu ảnh hưởng:** nhóm gán nhãn và nhóm huấn luyện mô hình thị giác xe tự hành; lỗi QC có thể đưa ảnh không dùng được hoặc nhãn sai vào tập train.
-- **Điểm nghẽn:** biến đổi synthetic có thể làm mất khả năng quan sát đối tượng hoặc làm nhãn không còn đúng, trong khi ảnh vẫn trông hợp lệ ở chỉ số toàn khung hình.
-- **Đầu vào → đầu ra:** ảnh gốc, bảng bbox và ảnh holdout đã biến đổi → `qc.csv` gồm `image_id`, `pred_unusable` cùng score/reason; provenance manifest, review queue, audit log và quyết định.
-- **GO / HOLD / REWORK:** M5 phát hành GO nếu provenance có dữ liệu và tỷ lệ unusable dự đoán không vượt `max_unusable_rate=0.30`; HOLD nếu thiếu provenance; REWORK nếu tỷ lệ vượt ngưỡng. Đây là chính sách của PoC, không phải phê duyệt phát hành dữ liệu thật.
-- **Giả định:** fixture là synthetic, không chứa PII thật; ngoài fixture cần domain owner xác nhận usability, DPO/legal xác nhận các nghĩa vụ áp dụng. Không tuyên bố tuân thủ luật từ QC tự động.
+Ảnh synthetic có thể hỏng usability hoặc làm nhãn đối tượng không còn đúng. Người gán nhãn và nhóm train mô hình chịu hậu quả nếu các ảnh này được đưa vào tập train. Pipeline nhận ảnh gốc, bbox và ảnh biến đổi; xuất QC theo image_id, queue review, audit và quyết định.
+
+Chính sách M5 hiện tại: HOLD nếu thiếu/rỗng provenance; REWORK nếu tỷ lệ unusable dự đoán vượt 0.30; GO trong các trường hợp còn lại. Đây là chính sách PoC; usability ngoài đời cần domain owner xác nhận.
 
 ## 02 · Dữ liệu và provenance
 
-| Split / bảng | N | Nguồn / license | Synthetic? |
-|---|---:|---|---|
-| Originals | 30: 20 dev + 10 holdout | `fixtures/t03_synthetic/manifest.csv`; CC0-1.0, được tạo cho AI20K Day06 | Có |
-| Holdout transformed | 45 ảnh, 5 biến thể cho mỗi 10 ảnh gốc holdout | Cùng fixture và license trong manifest | Có |
-| Objects | Bbox theo ảnh gốc | `fixtures/t03_synthetic/objects.csv` | Có |
-| Ảnh thực | 0 trong checkout được đánh giá | `data/real/` không có trong đầu vào được cung cấp | Không áp dụng |
+| Bộ dữ liệu | Vai trò / kích thước | Nguồn và quyền sử dụng |
+|---|---|---|
+| Fixture chính thức | 30 ảnh gốc, 45 holdout transformed | Synthetic CC0 theo manifest; chưa có GT hidden overlay |
+| Ảnh nhóm | 30 ảnh data/image, 1280×720; chia 20 dev / 10 holdout, seed 42 | Ảnh thực; nguồn/license chưa được nhóm xác nhận |
+| Bbox GT | 30 file YOLO trong obj_train_data.zip; đủ 10 class names | File zip do Lead cung cấp |
+| Input chuẩn hóa | 168 bbox giữ lại, 10 bbox bị loại theo importer hiện có | out/member6/source/label_fixes.csv ghi lý do |
+| Gold nội bộ | 130 biến thể từ đúng 10 ảnh gốc holdout; 52 unusable, 78 usable | Night/glare/fog/blur × severity 0–2, cộng erase |
+| Evaluation GT nội bộ | image_id, unusable, transform, severity, note | out/member6/gold/team_holdout_gt.csv, không đưa vào input pipeline |
 
-Schema ảnh: `image_id`, `path`, `split`; bbox: `image_id`, `obj_id`, `class`, `x`, `y`, `w`, `h`. Seed chuẩn là 42. Split theo ID ảnh gốc (dev/holdout), không chia ngẫu nhiên từng biến thể. Đã chạy `python -m tools.verify_manifests`: cả 14/14 manifest fixture đang fail hash; riêng T03 có 5 hash lệch. Blob trong Git khớp hash manifest, còn byte trong working tree khác; `core.autocrlf=true` và CRLF hiện diện, nên nguyên nhân nhiều khả năng là xử lý line ending trên Windows. Đây là lỗi cần M1/M2 xử lý ở `.gitattributes`/checkout trước khi bật strict provenance.
+ZIP là nhãn đối tượng của ảnh gốc. Công cụ import áp dụng mapping và cleanup của nhóm; các bbox bị loại chưa được Member 6 xác nhận bằng review thủ công. Gold usability dựa trên phép biến đổi đã biết, không suy đoán nhãn hidden fixture. Erase dùng inpainting theo bbox; nhãn unusable theo operation chưa chứng minh mọi đối tượng thực sự biến mất hoàn toàn.
 
-**Giới hạn provenance:** `src/t03/provenance.py` cung cấp schema manifest, nhưng hiện generator `src/t03/generate.py::generate_dev_variants()` trả DataFrame rỗng (TODO). Vì vậy chưa tạo được provenance cho ảnh sinh từ pipeline ở checkout này; `decision_log.csv` có hai bản ghi HOLD với `MISSING_PROVENANCE_MANIFEST`.
+Ảnh và GT sinh thêm nằm dưới out/ (gitignored). SHA256 của ZIP, GT và config được ghi trong t03_benchmark_details.json. Script không đưa ảnh thật vào reports/demo.
 
-GT nằm trong `fixtures/t03_synthetic/gt/` theo track docs và bị loại khỏi learner repo bởi `.gitignore`. Nội dung GT không được dùng hoặc suy đoán trong báo cáo này. Đánh giá holdout cần instructor overlay.
+Lần kiểm tra fixture trước ghi nhận 14 manifest fail hash, riêng T03 lệch 5 file văn bản; Git blob khớp manifest nhưng working tree khác. CRLF/core.autocrlf=true là dấu hiệu nguyên nhân. Benchmark nội bộ dùng manifest mới tạo, strict provenance vẫn bật và cả hai run exit 0.
 
 ## 03 · Thiết kế
 
-Luồng dự kiến: `originals + objects` → sinh night/glare/fog/blur/erase từ dev → ghi lineage → so ảnh holdout với ảnh cha và bbox → QC → top-10 review → override/audit → quyết định.
+Luồng: import bbox → chọn 10 ảnh holdout bằng split cố định → tạo biến thể và GT bên ngoài pipeline → baseline/PoC cùng input → evaluator chuẩn → compare → báo cáo lỗi.
 
-PoC QC (`src/t03/qc.py`) so sánh cường độ sáng, độ tương phản, Laplacian và ảnh cha; dò tâm glare đối với bbox; dò vùng bbox gần đồng màu để nhận diện erase. Ngưỡng được đọc từ `configs/lab.yaml`. Baseline (`src/pipeline_baseline.py`) dùng blur Laplacian và độ tối toàn ảnh, không phân tích bbox hay provenance.
+Baseline dùng Laplacian và độ tối toàn khung hình. PoC so với ảnh cha, đo sáng/tương phản/Laplacian, ước lượng tâm glare theo bbox và kiểm texture trong bbox để dò erase. Dùng nguyên ngưỡng config trước benchmark; không sửa thuật toán/ngưỡng sau khi xem kết quả.
 
-Không có model pretrained, API ngoài hoặc dữ liệu thật trong đường chạy được mô tả. Trade-off chính là rule QC dễ chạy offline và giải thích được, nhưng nhạy với ngưỡng và không học được hình dạng nhiễu camera ngoài đời.
+Các phép biến đổi và quality gate đều chạy CPU offline, không dùng model pretrained. Dùng ảnh cha hỗ trợ chẩn đoán nhưng chỉ phù hợp khi ảnh cha và lineage sẵn có. Tiêu chí metric lấy từ Track T03, usability rule và eval_t03, xem [metric contract](metric_contract.md).
 
-Tài liệu thiết kế dùng trong repo: [Track T03](../docs/tracks/T03.md), [usability rule](../fixtures/t03_synthetic/README_usability_rule.md), evaluator chuẩn `src/metrics/tracks.py::eval_t03` và contract ở [metric_contract.md](metric_contract.md).
+## 04 · Baseline vs PoC — benchmark nội bộ
 
-## 04 · Baseline vs PoC
+Bảng dưới do src.compare sinh từ metrics_baseline.json và metrics_poc.json; hai run cùng 130 ảnh, seed 42, B=10, không reviewer override:
 
-| Hạng mục | Baseline | PoC |
-|---|---|---|
-| Phương pháp | Laplacian + ngưỡng tối, toàn ảnh | So ảnh biến đổi với ảnh cha; kiểm tra bbox, glare/erase và mức độ biến đổi |
-| Input | Cùng fixture T03 khi chạy | Cùng fixture T03 khi chạy |
-| Seed / heldout | Seed 42 / 45 ảnh holdout theo contract | Seed 42 / cùng pool theo contract |
-| F1 / precision / recall | Chưa chấm được | Chưa chấm được |
+Baseline: `baseline` (git 69e2436, seed 42) · PoC: `poc` (git 69e2436, seed 42)
 
-Không có `fixtures/t03_synthetic/gt/holdout_gt.csv` trong learner checkout và không có `reports/metrics_baseline.json` / `reports/metrics_poc.json`. Vì vậy `src.evaluate` chưa thể sinh metrics JSON; `src.compare` chưa thể tạo bảng kết quả hợp lệ. File `reports/table1_baseline_vs_poc.md` sẽ được sinh bởi script sau khi instructor cung cấp GT overlay và hai run hoàn chỉnh. Không thay thế kết quả bằng số giả hoặc nhãn holdout tự suy đoán.
+| Metric (unit) | Slice | Baseline | PoC | Δ abs | Δ rel | Better | N |
+|---|---|---|---|---|---|---|---|
+| **Transform QC F1** (F1, positive = unusable) | all | 0.5567 | 0.7619 | 0.2052 | +36.9% | higher | 130 |
+| Precision (unusable) (TP/(TP+FP)) | all | 0.6000 | 1.0000 | 0.4000 | +66.7% | higher | 130 |
+| Recall (unusable) (TP/(TP+FN)) | all | 0.5192 | 0.6154 | 0.0962 | +18.5% | higher | 130 |
+| Missed label-invalidating edits (count) | all | 10.0000 | 10.0000 | 0.0000 | +0.0% | lower | None |
+| Provenance completeness (manifest rows with all required fields) | all | n/a | n/a | n/a | n/a | higher | None |
+| Runtime / 100 items (s) | all | 1.8314 | 21.8512 | | | lower | |
 
-## 05 · Protocol đánh giá
+PoC tăng F1 nhưng vẫn bỏ lọt 20/52 positive. Chi phí xử lý tăng theo so sánh ảnh cha và bbox; runtime có trong run_info, không phải phép đo detector downstream. Provenance completeness là n/a vì baseline không xuất manifest và PoC xuất manifest rỗng; không được diễn giải thành 100%.
 
-Primary metric là Transform QC F1, positive = unusable; công thức và join chính xác theo `image_id` được khai báo trong [metric_contract.md](metric_contract.md). Candidate pool là 45 holdout; threshold policy dùng config hiện tại, seed 42. Contract chưa chứng minh các ngưỡng được tune trên dev gold: dev gold cũng chưa được materialize ở checkout này. Không chỉnh threshold sau khi xem holdout.
+## 05 · Protocol và bất định
 
-Khi GT sẵn có, chạy đúng các lệnh trong metric contract cho baseline và PoC, xuất metrics JSON và `table1_baseline_vs_poc.md`. Báo slice theo transform và missed `erase`; bootstrap CI theo cụm ảnh gốc do 45 biến thể phụ thuộc vào 10 ảnh cha.
+Join GT/prediction chính xác theo image_id, positive = unusable theo rule đã chốt. F1 = 2TP/(2TP+FP+FN), precision = TP/(TP+FP), recall = TP/(TP+FN); evaluator giữ giá trị không xác định là null. Không đổi pool/ngưỡng sau khi xem kết quả. 20 ảnh dev của nguồn không tham gia benchmark này.
 
-## 06 · Failure cases và sim-to-real gap
+Đã bootstrap 2.000 lần theo 10 cụm parent_image, seed 42: F1 CI95 baseline [0.520833, 0.591837], PoC [0.750000, 0.772727]. CI và transform/severity slices do tools.summarize_t03_benchmark sinh ở [chi tiết](t03_benchmark_details.md). Chỉ có 10 parent, phép sinh cùng family với thuật toán, và lựa chọn dữ liệu của nhóm; CI không bao phủ bias do chọn mẫu hoặc sim-to-real.
 
-Các mục dưới đây là **failure modes cần kiểm tra theo rule và logic hiện tại**, không phải false negative/false positive đã xác nhận trên GT holdout:
+Repo đã có bộ gold real dùng ảnh nhóm trước lần chạy này. Chưa xác nhận các thành viên đã xem/tune trên những ảnh nào; tên holdout ở đây chỉ split của importer, không chứng minh bộ test hoàn toàn chưa từng được nhóm sử dụng.
 
-1. **Erase cục bộ, nhãn bbox còn nguyên:** rule coi đây là unusable. Bộ dò chỉ chạy khi thống kê toàn ảnh gần như không đổi; nếu vùng bị xóa còn nhiều texture/viền hoặc thống kê ảnh vượt điều kiện kích hoạt, độ lệch chuẩn trong bbox có thể không xuống ngưỡng và ảnh bị bỏ lọt. Cần kiểm theo `reason=object_removed_label_kept` trên `erase` slice.
-2. **Glare severity 1 chạm bbox nhưng không tạo đỉnh mạnh:** rule coi glare severity ≥1 trong bbox là unusable. Gate dùng điều kiện toàn ảnh (`mean_ratio`, `p99_diff`) và ước lượng tâm Gaussian; flare lệch tâm, nhiều đỉnh hoặc bị clipping có thể làm sai tâm/ngưỡng, gây miss hoặc cảnh báo nhầm. Bài test đơn vị bao phủ glare Gaussian lý tưởng nằm trong bbox, chưa thay thế kiểm tra holdout.
+## 06 · Hai failure cases đã xác nhận
 
-**Sim-to-real gap:** fixture mô phỏng biến đổi tham số hóa (night, glare Gaussian, fog, blur, erase). Camera thật có auto-exposure, rolling shutter, chuyển động, lens flare đa hình, noise phụ thuộc cảm biến, mưa/bẩn ống kính và tương quan theo thời gian. Checkout không có ảnh thật hay detector downstream để đo hiệu năng nhận diện; do đó chưa thể định lượng sim-to-real gap. Bước tiếp theo là đánh giá riêng trên real data được cấp phép, có protocol gán nhãn rõ ràng, không đưa ảnh có người/biển số lên repo công khai.
+Metadata và đặc trưng số nằm trong t03_benchmark_details.json; ảnh before/after giữ local trong out/member6/gold/team_holdout.
+
+1. **g0011 — blur severity 2**, parent orig_05, nguồn data/image/6.jpg. GT=1, PoC=0, reason severity_1_blur_usable. Laplacian ratio=0.008397289540716184 vượt ngưỡng severity 2 là 0.0032; std ratio=0.9710903167724609 vượt ngưỡng 0.895. PoC hạ mức blur thành severity 1. Đây là ví dụ ngưỡng fixture không chuyển tốt sang ảnh thật độ phân giải cao; slice blur bỏ lọt 10/10 positive.
+2. **g0012 — erase**, cùng parent và ảnh nguồn. GT=1, PoC=0, reason usable_clean. Global lap ratio=0.8975443300199364 cho phép bước dò erase, nhưng bbox sau inpainting còn std=34.73826599121094 và color_std=35.3848762512207, lớn hơn ngưỡng 3.5/6.0. Detector giả định vùng xóa gần đồng màu, trong khi inpainting giữ texture; cả 10 erase bị lọt.
+
+Đây là root cause từ code và đặc trưng ảnh, không phải kết luận threshold mới cần dùng. Bước sửa thuộc M4, cần xác nhận trên dev độc lập rồi chạy heldout mới.
+
+**Sim-to-real gap:** benchmark đã dùng ảnh gốc thật nhưng weather/corruption vẫn synthetic. Chưa có GT thời tiết tự nhiên, nhãn downstream hay detector để đo gap định lượng. Exposure, lens flare nhiều đỉnh, sensor noise, chuyển động và temporal correlation của camera thật chưa được mô phỏng đầy đủ.
 
 ## 07 · Human review và quyết định
 
-M5 tạo queue top-10 theo score, contact sheet HTML offline hiển thị ảnh gốc/biến đổi và bbox, nhận reviewer override rồi ghi `audit_log.jsonl`. Decision yêu cầu `reason_code` và `owner`. Log hiện có ở `reports/decision_log.csv` ghi hai lần HOLD do manifest rỗng/thiếu. Các lần đó cho thấy guard provenance đang chặn release; chúng không phải kết quả benchmark chất lượng ảnh.
+PoC tạo contact sheet before/after và queue top-10 ở out/member6/poc. Chưa có reviewer override cho run này; n_reviewed=0. Audit/decision giữ local cùng run.
 
-## 08 · Tái lập và kiểm thử
+Quyết định hiện tại là HOLD / MISSING_PROVENANCE_MANIFEST: n_generated=0 do src/t03/generate.py còn TODO. Tỷ lệ unusable dự đoán 0.2462 thấp hơn 0.30 cũng không đủ cho release. Provenance phục vụ tạo GT benchmark nằm riêng ở gold/team_holdout_provenance.csv; đó không phải manifest do PoC xuất.
 
-Lệnh đường chạy chính theo repo:
+## 08 · Tái lập và tests
 
-```bash
-python -m src.main --config configs/lab.yaml --track t03 --offline --seed 42 --run-name poc --output out/poc
-python -m src.evaluate --track t03 --pred out/poc/qc.csv --run-name poc --out reports/metrics_poc.json
-python -m src.compare reports/metrics_baseline.json reports/metrics_poc.json --out reports/table1_baseline_vs_poc.md
-pytest -q
+Từ checkout sạch với data/image/*.jpg và data/obj_train_data.zip đã có, chạy:
+
+```powershell
+python -m tools.import_team_labels --out out/member6/source --seed 42
+python -m tools.make_gold_set --source out/member6/source --split holdout --name team_holdout --out-root out/member6/gold --seed 42
+python -m src.main --track t03 --input out/member6/gold/team_holdout --pipeline src.pipeline_baseline --output out/member6/baseline --run-name baseline --offline --seed 42
+python -m src.main --track t03 --input out/member6/gold/team_holdout --output out/member6/poc --run-name poc --offline --seed 42
+python -m src.evaluate --track t03 --gt out/member6/gold/team_holdout_gt.csv --pred out/member6/baseline/qc.csv --run-name baseline --out reports/metrics_baseline.json
+python -m src.evaluate --track t03 --gt out/member6/gold/team_holdout_gt.csv --pred out/member6/poc/qc.csv --run-name poc --out reports/metrics_poc.json
+python -X utf8 -m src.compare reports/metrics_baseline.json reports/metrics_poc.json --out reports/table1_baseline_vs_poc.md
+python -m tools.summarize_t03_benchmark
+python -m pytest -q tests/test_t03.py
 ```
 
-Môi trường: Python 3.13.14, Windows 11. `python -m pytest -q tests/test_t03.py` pass 4 tests. Toàn bộ `python -m pytest -q` có 17 failures: 14 kiểm thử hash fixture và 3 kiểm thử E2E T03 bị dừng bởi strict provenance do 5 hash lệch T03. Các pipeline tests còn kiểm reproducibility, review override/audit và từ chối review thiếu reviewer. Tài khoản shell không có lệnh `pytest` trực tiếp; dùng module invocation như trên. Pipeline chưa là clean-start hoàn chỉnh vì generator dev còn TODO; hiện E2E bị chặn ngay từ bước load bởi hash mismatch trước khi tới generator.
+Windows/Python 3.13.14. Dùng -X utf8 cho compare vì console cp1258 không in được ký tự delta. Các công cụ import/gold thay thế thư mục output sinh trước đó, vì vậy dùng đúng các đường dẫn out/member6 ở trên.
 
-## 09 · Giới hạn và đạo đức
+Tests M6 pass 4/4. Lần full-suite trước có 17 lỗi (14 manifest fixture + 3 E2E T03 vì strict provenance). Benchmark nội bộ exit 0 không khắc phục các lỗi fixture đó.
 
-- Kết quả chỉ áp dụng cho fixture synthetic nhỏ; không khái quát thành đảm bảo chất lượng ảnh thực.
-- Rule threshold có thể gây false alarm hoặc miss; dùng reviewer và audit log trước quyết định release.
-- Manifest fixture khai báo CC0-1.0; dữ liệu thật cần kiểm license/quyền sử dụng riêng.
-- Không có PII thật trong fixture theo docs; dữ liệu thật, nếu được cấp, không commit lên repo công khai/cloud.
-- Không kết luận tuân thủ GDPR hoặc luật Việt Nam; cần DPO/legal xác nhận cho use case thực tế.
-- Scale lên 10× cần đo latency và độ ổn định theo thiết bị, scene và nguồn camera; hiện chưa có phép đo.
+## 09 · Giới hạn và cải tiến
 
-## 10 · Đóng góp nhóm
+- Xác nhận lại license/source của ảnh thật và review bbox cleanup trước chia sẻ hay release.
+- Đánh giá trên nhãn usability thủ công độc lập để kiểm chứng nhãn suy từ operation; không xem bbox zip là nhãn thời tiết tự nhiên.
+- M4 xử lý miss blur/erase trên dev; M3/M2 hoàn thiện generator/manifest; giữ threshold heldout cố định.
+- Bổ sung human review có người chịu trách nhiệm và audit; hiện mới có queue, chưa có xác nhận của reviewer cho benchmark.
+- Không suy từ các số này thành đảm bảo chất lượng production hoặc tuân thủ pháp luật.
 
-| Thành viên | Vai trò / bằng chứng |
-|---|---|
-| M1 | Integration, CLI, cấu hình; xem `reports/team_contributions.csv` và lịch sử Git |
-| M2 | Fixture, hash và provenance |
-| M3 | Generator và baseline; generator hiện còn TODO |
-| M4 | Quality gate `src/t03/qc.py` |
-| M5 | Review flow, contact sheet, decision |
-| M6 | Tests T03, metric contract, báo cáo, slide demo; Git author `maawongf <maawongf@gmail.com>`; commit deliverable `e0b7c45` |
+## 10 · Đóng góp và tài liệu
 
-Không gán tên thật hoặc email Git cho M1–M5 khi tài liệu chưa ánh xạ danh tính. SHA của commit M6 được ghi trong [team_contributions.csv](team_contributions.csv); các mapping còn thiếu cần nhóm bổ sung.
+Bảng [team_contributions.csv](team_contributions.csv) ghi đóng góp Member 6. Các thành viên khác chưa có ánh xạ tên thật/email đầy đủ nên không tự gán tác giả.
 
-## 11 · Tài liệu tham chiếu
-
-| Tài liệu | Ý nghĩa |
-|---|---|
-| `docs/tracks/T03.md` | Schema dữ liệu, output, primary metric, giới hạn eval và mốc bài lab |
-| `fixtures/t03_synthetic/README_usability_rule.md` | Định nghĩa positive `unusable` được dùng làm GT |
-| `src/metrics/tracks.py::eval_t03` | Thực thi metric, phép nối ID và slice chuẩn; không sửa metric để làm đẹp số |
+Tài liệu dùng: docs/tracks/T03.md, fixtures/t03_synthetic/README_usability_rule.md, src/metrics/tracks.py::eval_t03, tools/import_team_labels.py và tools/make_gold_set.py. Các metrics/table/details trong reports được sinh bằng script, không nhập số thay evaluator.
