@@ -17,4 +17,18 @@ params:
   max_unusable_rate: 0.30                    # Member 5: REWORK neu ti le unusable vuot nguong nay
   budget: 10                                 # review budget B (khai trong metric_contract.md)
   # Nguong QC (Member 4 + 6): dien va COMMIT truoc khi chay holdout, khong sua sau do
-  thresholds: {}
+  thresholds:
+    night_sev2_mean_ratio: 0.14
+    night_sev1_mean_ratio: 0.40
+    blur_sev2_lap_ratio: 0.0032
+    blur_sev2_std_ratio: 0.895
+    blur_sev1_lap_ratio: 0.06
+    fog_sev2_std_ratio: 0.60
+    fog_sev2_lap_ratio: 0.25
+    fog_sev1_std_ratio: 0.82
+    glare_sev2_strength: 0.75
+    glare_sev1_strength: 0.40
+    erase_max_std: 3.5
+    erase_max_color_std: 6.0
+    erase_min_parent_std: 12.0
+    erase_min_mad: 10.0
