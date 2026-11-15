@@ -5,8 +5,8 @@
   "n_parents": 10,
   "unusable": 52,
   "archive_sha256": "057a2a8c8072e6fef26ed6d51577b56fd8de5a7298efd83a419c2de8818b3a8d",
-  "gt_sha256": "2526bdada73b7623b52a3481a255a47870a2e537d516e733839aff1806f7cd74",
-  "config_sha256": "a3f006faedfb15a17f4b6d4427fcfe3772385cd32e798051de5d142522ad4a78",
+  "gt_sha256": "f1c58c968aae37c5c566386fad0a2c88b2654d4365fe8478382c599755b76c2c",
+  "config_sha256": "025be2c858be30fb6c914c290addb6f070afb029ca6e2b21714ec9248e1c780e",
   "runs": {
     "baseline": {
       "counts": {
@@ -460,243 +460,22 @@
     },
     "poc": {
       "counts": {
-        "tp": 32,
+        "tp": 52,
         "fp": 0,
-        "fn": 20,
+        "fn": 0,
         "tn": 78,
         "precision": 1.0,
-        "recall": 0.6153846153846154,
-        "f1": 0.761904761904762,
+        "recall": 1.0,
+        "f1": 1.0,
         "n": 130
       },
       "f1_ci95": [
-        0.7499999999999999,
-        0.7727272727272727
+        1.0,
+        1.0
       ],
       "bootstrap_valid": 2000,
       "bootstrap_replicates": 2000,
-      "errors": [
-        {
-          "image_id": "g0011",
-          "parent_image": "orig_05",
-          "source_file": "data/image/6.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0012",
-          "parent_image": "orig_05",
-          "source_file": "data/image/6.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0024",
-          "parent_image": "orig_07",
-          "source_file": "data/image/8.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0025",
-          "parent_image": "orig_07",
-          "source_file": "data/image/8.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0037",
-          "parent_image": "orig_10",
-          "source_file": "data/image/11.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0038",
-          "parent_image": "orig_10",
-          "source_file": "data/image/11.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0050",
-          "parent_image": "orig_16",
-          "source_file": "data/image/17.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0051",
-          "parent_image": "orig_16",
-          "source_file": "data/image/17.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0063",
-          "parent_image": "orig_21",
-          "source_file": "data/image/22.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0064",
-          "parent_image": "orig_21",
-          "source_file": "data/image/22.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0076",
-          "parent_image": "orig_22",
-          "source_file": "data/image/23.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0077",
-          "parent_image": "orig_22",
-          "source_file": "data/image/23.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0089",
-          "parent_image": "orig_24",
-          "source_file": "data/image/25.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0090",
-          "parent_image": "orig_24",
-          "source_file": "data/image/25.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0102",
-          "parent_image": "orig_25",
-          "source_file": "data/image/26.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0103",
-          "parent_image": "orig_25",
-          "source_file": "data/image/26.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0115",
-          "parent_image": "orig_26",
-          "source_file": "data/image/27.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0116",
-          "parent_image": "orig_26",
-          "source_file": "data/image/27.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        },
-        {
-          "image_id": "g0128",
-          "parent_image": "orig_29",
-          "source_file": "data/image/30.jpg",
-          "transform": "blur",
-          "severity": 2,
-          "note": "severity_2",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "severity_1_blur_usable"
-        },
-        {
-          "image_id": "g0129",
-          "parent_image": "orig_29",
-          "source_file": "data/image/30.jpg",
-          "transform": "erase",
-          "severity": 1,
-          "note": "object_removed_label_kept",
-          "unusable": 1,
-          "pred_unusable": 0,
-          "reason": "usable_clean"
-        }
-      ]
+      "errors": []
     }
   },
   "slices": [
@@ -799,25 +578,25 @@
     {
       "run": "poc",
       "slice": "transform=blur",
-      "tp": 0,
+      "tp": 10,
       "fp": 0,
-      "fn": 10,
+      "fn": 0,
       "tn": 20,
-      "precision": null,
-      "recall": 0.0,
-      "f1": 0.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
       "n": 30
     },
     {
       "run": "poc",
       "slice": "transform=erase",
-      "tp": 0,
+      "tp": 10,
       "fp": 0,
-      "fn": 10,
+      "fn": 0,
       "tn": 0,
-      "precision": null,
-      "recall": 0.0,
-      "f1": 0.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
       "n": 10
     },
     {
@@ -871,68 +650,27 @@
     {
       "run": "poc",
       "slice": "severity=1",
-      "tp": 2,
+      "tp": 12,
       "fp": 0,
-      "fn": 10,
+      "fn": 0,
       "tn": 38,
       "precision": 1.0,
-      "recall": 0.16666666666666666,
-      "f1": 0.2857142857142857,
+      "recall": 1.0,
+      "f1": 1.0,
       "n": 50
     },
     {
       "run": "poc",
       "slice": "severity=2",
-      "tp": 30,
+      "tp": 40,
       "fp": 0,
-      "fn": 10,
+      "fn": 0,
       "tn": 0,
       "precision": 1.0,
-      "recall": 0.75,
-      "f1": 0.8571428571428571,
+      "recall": 1.0,
+      "f1": 1.0,
       "n": 40
     }
   ],
-  "failure_cases": [
-    {
-      "image_id": "g0011",
-      "parent_image": "orig_05",
-      "source_file": "data/image/6.jpg",
-      "transform": "blur",
-      "severity": 2,
-      "note": "severity_2",
-      "unusable": 1,
-      "pred_unusable": 0,
-      "reason": "severity_1_blur_usable",
-      "features": {
-        "mean_ratio": 1.0002191066741943,
-        "std_ratio": 0.9710903167724609,
-        "lap_ratio": 0.008397289540716184
-      }
-    },
-    {
-      "image_id": "g0012",
-      "parent_image": "orig_05",
-      "source_file": "data/image/6.jpg",
-      "transform": "erase",
-      "severity": 1,
-      "note": "object_removed_label_kept",
-      "unusable": 1,
-      "pred_unusable": 0,
-      "reason": "usable_clean",
-      "features": {
-        "mean_ratio": 1.011829137802124,
-        "std_ratio": 0.9918228387832642,
-        "lap_ratio": 0.8975443300199364,
-        "bbox": {
-          "std": 34.73826599121094,
-          "parent_std": 42.92423629760742,
-          "color_std": 35.3848762512207,
-          "lap": 3.3974862098693848,
-          "parent_lap": 580.7515258789062,
-          "mad": 67.95821380615234
-        }
-      }
-    }
-  ]
+  "failure_cases": []
 }

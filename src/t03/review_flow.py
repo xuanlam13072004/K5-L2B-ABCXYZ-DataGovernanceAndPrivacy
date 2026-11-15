@@ -24,10 +24,17 @@ def rank(ctx: RunContext, scored: pd.DataFrame, data: dict) -> pd.DataFrame:
     hold = data["holdout"][["image_id", "path", "parent_image"]]
     parents = data["originals"][["image_id", "path"]].rename(columns={"image_id": "parent_image", "path": "parent_path"})
     items = scored.merge(hold, on="image_id", how="left").merge(parents, on="parent_image", how="left")
-    # TODO(Member 5): if score ties (e.g. placeholder QC), prefer images closest to the threshold.
-    q = make_review_queue(items, id_col="image_id", score_col="score", budget=budget,
-                          reason_col="reason", evidence_col="path")
-    q["parent_path"] = q.item_id.map(items.set_index("image_id").parent_path)
+    # Uncertainty first: spend the review budget where the quality gate is most likely wrong, i.e. scores
+    # closest to the boundary between "usable" (qc.py scores <= 0.48) and "unusable" (>= 0.78).
+    boundary = float(ctx.param("review_boundary", 0.63))
+    items["review_priority"] = (1.0 - (items.score - boundary).abs()).round(4)
+    items["suggested_action"] = items.pred_unusable.map({1: "confirm_unusable", 0: "confirm_usable"})
+    q = make_review_queue(items, id_col="image_id", score_col="review_priority", budget=budget,
+                          reason_col="reason", action_col="suggested_action", evidence_col="path")
+    by_id = items.set_index("image_id")
+    q["qc_score"] = q.item_id.map(by_id.score)
+    q["pred_unusable"] = q.item_id.map(by_id.pred_unusable)
+    q["parent_path"] = q.item_id.map(by_id.parent_path)
     write_review_queue(q, ctx.out("review_queue.csv"))
 
     objs = data["objects"]
@@ -61,7 +68,7 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
 def decide(ctx: RunContext, final: pd.DataFrame, data: dict) -> Decision:
     """Release policy (Member 5, ported from commit 9bb095c). Thresholds live in configs/lab.yaml -> params.
 
-    HOLD   if the provenance record is missing, empty or incomplete
+    HOLD   if no holdout image was scored, or the provenance record is missing or empty
     REWORK if the predicted unusable rate exceeds max_unusable_rate
     GO     otherwise
     """
@@ -76,6 +83,10 @@ def decide(ctx: RunContext, final: pd.DataFrame, data: dict) -> Decision:
     reviewed = ctx.output_dir / "review_queue_reviewed.csv"
     evidence = [str(ctx.out("qc.csv")), str(manifest)] + ([str(reviewed)] if reviewed.exists() else [])
 
+    if n == 0:
+        return Decision(status="HOLD", reason_code="NO_HOLDOUT_IMAGES",
+                        reason="No holdout image was scored: nothing supports a release decision.",
+                        owner=owner, scope="t03 holdout_transformed", evidence=evidence, metrics=metrics)
     if not manifest.exists() or metrics["n_generated"] == 0:
         return Decision(status="HOLD", reason_code="MISSING_PROVENANCE_MANIFEST",
                         reason="Transform manifest is missing or empty: synthetic images cannot be traced to their parents.",

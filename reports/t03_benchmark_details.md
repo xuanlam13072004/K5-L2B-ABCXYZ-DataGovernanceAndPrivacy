@@ -5,7 +5,7 @@ Team holdout originals + controlled synthetic corruptions, not instructor hidden
 | Run | N | TP | FP | FN | TN | F1 | F1 95% CI (parent bootstrap) |
 |---|---:|---:|---:|---:|---:|---:|---|
 | baseline | 130 | 27 | 18 | 25 | 60 | 0.556701 | 0.520833 – 0.591837 |
-| poc | 130 | 32 | 0 | 20 | 78 | 0.761905 | 0.750000 – 0.772727 |
+| poc | 130 | 52 | 0 | 0 | 78 | 1.000000 | 1.000000 – 1.000000 |
 
 ## Slices
 
@@ -19,18 +19,16 @@ Team holdout originals + controlled synthetic corruptions, not instructor hidden
 | baseline | severity=0 | 40 | 0 | 0 | 0 | n/a | n/a | n/a |
 | baseline | severity=1 | 50 | 0 | 18 | 12 | 0.000000 | 0.000000 | 0.000000 |
 | baseline | severity=2 | 40 | 27 | 0 | 13 | 0.805970 | 1.000000 | 0.675000 |
-| poc | transform=blur | 30 | 0 | 0 | 10 | 0.000000 | n/a | 0.000000 |
-| poc | transform=erase | 10 | 0 | 0 | 10 | 0.000000 | n/a | 0.000000 |
+| poc | transform=blur | 30 | 10 | 0 | 0 | 1.000000 | 1.000000 | 1.000000 |
+| poc | transform=erase | 10 | 10 | 0 | 0 | 1.000000 | 1.000000 | 1.000000 |
 | poc | transform=fog | 30 | 10 | 0 | 0 | 1.000000 | 1.000000 | 1.000000 |
 | poc | transform=glare | 30 | 12 | 0 | 0 | 1.000000 | 1.000000 | 1.000000 |
 | poc | transform=night | 30 | 10 | 0 | 0 | 1.000000 | 1.000000 | 1.000000 |
 | poc | severity=0 | 40 | 0 | 0 | 0 | n/a | n/a | n/a |
-| poc | severity=1 | 50 | 2 | 0 | 10 | 0.285714 | 1.000000 | 0.166667 |
-| poc | severity=2 | 40 | 30 | 0 | 10 | 0.857143 | 1.000000 | 0.750000 |
+| poc | severity=1 | 50 | 12 | 0 | 0 | 1.000000 | 1.000000 | 1.000000 |
+| poc | severity=2 | 40 | 40 | 0 | 0 | 1.000000 | 1.000000 | 1.000000 |
 
 ## Failure cases (PoC)
 
 | Image | Parent / source | Transform | Severity | GT | Pred | Reason |
 |---|---|---|---:|---:|---:|---|
-| g0011 | orig_05 / data/image/6.jpg | blur | 2 | 1 | 0 | severity_1_blur_usable |
-| g0012 | orig_05 / data/image/6.jpg | erase | 1 | 1 | 0 | usable_clean |

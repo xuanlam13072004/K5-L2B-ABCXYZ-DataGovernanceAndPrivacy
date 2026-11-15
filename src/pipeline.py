@@ -16,6 +16,8 @@ Rules: never read fixtures/*/gt/; seed everything via ctx.rng / ctx.seed; no net
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
 from .common.context import RunContext
@@ -25,9 +27,26 @@ from .metrics.tracks import get_track
 from .t03 import generate, provenance, qc, review_flow
 
 
+ROOT = Path(__file__).resolve().parents[1]
+TEAM_INPUT = ROOT / "data" / "t03_real"
+
+
+def _ensure_team_input(d: Path) -> None:
+    """data/t03_real is generated (gitignored): (re)build it from data/image + data/obj_train_data.zip
+    when it is missing or was made by an older importer without holdout_transformed images."""
+    if d.resolve() != TEAM_INPUT.resolve():
+        return
+    if (d / "originals.csv").exists() and (d / "holdout_transformed.csv").exists():
+        return
+    from tools.import_team_labels import main as import_team_labels   # offline, deterministic (seed 42)
+    if import_team_labels(["--out", str(d), "--seed", "42"]) != 0:
+        raise FileNotFoundError(f"could not build {d} from data/image + data/obj_train_data.zip")
+
+
 # ---------------------------------------------------------------- 01 load  (Member 1)
 def load(ctx: RunContext) -> dict:
     d = ctx.input_dir
+    _ensure_team_input(d)
     manifest = d / "manifest.csv"
     problems = verify_manifest(manifest) if manifest.exists() else [{"problem": "no_manifest"}]
     if problems:
@@ -49,7 +68,7 @@ def load(ctx: RunContext) -> dict:
 # ---------------------------------------------------------------- 02 process  (M3 + M2 + M4)
 def process(ctx: RunContext, data: dict) -> pd.DataFrame:
     generated = generate.generate_dev_variants(ctx, data)     # M3: images on disk + one row per variant
-    provenance.write_transform_manifest(ctx, generated)       # M2: out/transform_manifest.csv
+    provenance.write_transform_manifest(ctx, generated, data) # M2: transform_manifest.csv + dev_gold.csv
     data["generated"] = generated
     scored = qc.predict(ctx, data)                            # M4: one row per holdout image
     qc.check_output(scored, data["holdout"])

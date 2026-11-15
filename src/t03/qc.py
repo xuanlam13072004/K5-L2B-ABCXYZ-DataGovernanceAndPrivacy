@@ -12,11 +12,19 @@ Usability rule (frozen, fixtures/t03_synthetic/README_usability_rule.md) — unu
 The holdout does NOT say which transform / severity was applied: compare each image with its parent
 (data["originals"], column parent_image) and use the parent's boxes (data["objects"]; same 320x180 size).
 Thresholds come from ctx.param("thresholds") — tune on the dev gold set, commit BEFORE running holdout.
+
+v2 (Lead, 2026-11-15, tuned only on the team dev split = 20 originals x 13 variants):
+  * blur severity is read from an estimated blur radius (re-blur the parent at candidate radii and keep the
+    closest), not from a Laplacian ratio: the generator's radius is in pixels, so Laplacian ratios of
+    severity 1 and 2 overlap on 1280x720 images (0.010-0.076 vs 0.003-0.027) and v1 never fired there.
+  * erase is also flagged when the change is concentrated inside one labelled box (in-painted, textured
+    fill), not only when the box became a flat colour patch.
 """
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from PIL import Image, ImageFilter
 
 from ..common.context import RunContext
 from ..common.image_ops import (
@@ -45,7 +53,39 @@ DEFAULT_THRESHOLDS = {
     "erase_max_color_std": 6.0,
     "erase_min_parent_std": 12.0,
     "erase_min_mad": 10.0,
+    "blur_sev2_radius_px": 3.5,          # v2: estimated Gaussian radius (px) at or above which blur = severity 2
+    "erase_min_inside_mad": 8.0,         # v2: mean |diff| inside the most-changed box
+    "erase_min_change_ratio": 20.0,      # v2: ... divided by mean |diff| outside all boxes
 }
+BLUR_CANDIDATE_RADII = (1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0)
+
+
+def estimate_blur_radius(img: np.ndarray, parent_img: np.ndarray) -> float:
+    """Gaussian radius (px) whose blur of the parent is closest (MSE, grayscale) to the image."""
+    target = to_gray(img)
+    parent = Image.fromarray(parent_img)
+    best_r, best_err = 0.0, float(np.mean((to_gray(parent_img) - target) ** 2))
+    for r in BLUR_CANDIDATE_RADII:
+        err = float(np.mean((to_gray(np.asarray(parent.filter(ImageFilter.GaussianBlur(r)))) - target) ** 2))
+        if err < best_err:
+            best_r, best_err = r, err
+    return best_r
+
+
+def inbox_change(diff_abs: np.ndarray, boxes: pd.DataFrame) -> tuple[float, float]:
+    """(mean |diff| inside the most-changed box, that value / mean |diff| outside every box)."""
+    H, W = diff_abs.shape
+    mask = np.zeros((H, W), bool)
+    best = 0.0
+    for _, b in boxes.iterrows():
+        x0, y0 = max(0, int(b.x)), max(0, int(b.y))
+        x1, y1 = min(W, int(b.x + b.w)), min(H, int(b.y + b.h))
+        if x1 <= x0 or y1 <= y0:
+            continue
+        mask[y0:y1, x0:x1] = True
+        best = max(best, float(diff_abs[y0:y1, x0:x1].mean()))
+    outside = float(diff_abs[~mask].mean()) if (~mask).any() else 0.0
+    return best, best / max(outside, 0.1)
 
 
 def evaluate_single_image(
@@ -73,6 +113,11 @@ def evaluate_single_image(
     # Only check when global image is not heavily darkened/blurred globally
     is_global_unchanged = (0.90 <= mean_ratio <= 1.10) and (lap_ratio > 0.50)
     if is_global_unchanged and len(boxes) > 0:
+        inside_mad, change_ratio = inbox_change(np.abs(diff), boxes)
+        if inside_mad >= th["erase_min_inside_mad"] and change_ratio >= th["erase_min_change_ratio"]:
+            score = float(np.clip(0.90 + 0.09 * min(1.0, change_ratio / (10 * th["erase_min_change_ratio"])), 0.90, 0.99))
+            return {"pred_unusable": 1, "score": round(score, 4), "reason": "object_removed_label_kept",
+                    "ssim": round(ssim_val, 4)}
         for _, box in boxes.iterrows():
             bm = bbox_erase_metrics(img, parent_img, float(box.x), float(box.y), float(box.w), float(box.h))
             if (
@@ -99,10 +144,11 @@ def evaluate_single_image(
 
     # 3. Check Blur (sharpness drop with unchanged mean brightness)
     if lap_ratio < th["blur_sev1_lap_ratio"] and 0.92 <= mean_ratio <= 1.08:
-        if lap_ratio < th["blur_sev2_lap_ratio"] and std_ratio < th["blur_sev2_std_ratio"]:
-            score = float(np.clip(0.85 + 0.14 * (1.0 - lap_ratio / th["blur_sev2_lap_ratio"]), 0.80, 0.99))
+        radius = estimate_blur_radius(img, parent_img)
+        if radius >= th["blur_sev2_radius_px"]:
+            score = float(np.clip(0.80 + 0.03 * (radius - th["blur_sev2_radius_px"]), 0.80, 0.99))
             return {"pred_unusable": 1, "score": round(score, 4), "reason": "severity_2_blur", "ssim": round(ssim_val, 4)}
-        score = float(np.clip(0.30 + 0.15 * (1.0 - lap_ratio / th["blur_sev1_lap_ratio"]), 0.20, 0.48))
+        score = float(np.clip(0.30 + 0.15 * radius / th["blur_sev2_radius_px"], 0.20, 0.48))
         return {"pred_unusable": 0, "score": round(score, 4), "reason": "severity_1_blur_usable", "ssim": round(ssim_val, 4)}
 
     # 4. Check Fog vs Glare (both increase mean brightness: mean_ratio > 1.08)

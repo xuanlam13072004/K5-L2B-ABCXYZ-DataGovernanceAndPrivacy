@@ -54,7 +54,7 @@ Mô phỏng 4 điều kiện thời tiết/cảm biến thực tế của xe t�
 | Transform | Cơ chế vật lý | Mức s1 | Mức s2 |
 | :--- | :--- | :--- | :--- |
 | **night** (Ban đêm/thiếu sáng) | Giảm hệ số sáng RGB kênh phi tuyến tính: $I_{out} = I \times \gamma$ | $\gamma = 0.35$ | $\gamma = 0.15$ |
-| **glare** (Lóa sáng ngược nắng/đèn pha) | Thêm điểm sáng Gaussian cực đại tại tâm ảnh với bán kính $R$: $I + A \cdot e^{-\frac{r^2}{2\sigma^2}}$ | $R = 120\text{px}$, độ gắt trung bình | $R = 250\text{px}$, bão hòa trắng vùng tâm |
+| **glare** (Lóa sáng ngược nắng/đèn pha) | Cộng điểm sáng Gaussian $I + s\cdot 255\cdot e^{-\frac{r^2}{2(R/2)^2}}$, $R = 0.35\cdot\max(H,W)$ (`corruptions.glare`). **Tâm lóa không cố định ở giữa ảnh:** trong pipeline (`src/t03/generate.py`) tâm được chọn có chủ đích, một nửa rơi vào bbox đối tượng, một nửa ngoài mọi bbox, và ghi vào cột `params` của `transform_manifest.csv` (nếu không truyền `center`, `corruptions.glare` chọn ngẫu nhiên) | $s = 0.6$ | $s = 1.0$ (bão hòa trắng quanh tâm) |
 | **fog** (Sương mù khí quyển) | Mô hình tán xạ khí quyển Koschmieder: $I_{out} = I \cdot t + L(1 - t)$ với độ truyền qua $t$ | $t = 0.55$, sương nhẹ | $t = 0.25$, sương mù dày đặc |
 | **blur** (Rung lắc camera/nhòe chuyển động) | Tích chập ma trận làm mờ Gaussian (Kernel $k \times k$, độ lệch $\sigma$) | Kernel $7 \times 7$, $\sigma = 1.5$ | Kernel $15 \times 15$, $\sigma = 3.5$ |
 

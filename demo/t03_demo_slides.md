@@ -9,25 +9,26 @@
 
 ## Slide 2 — Contract dữ liệu và metric
 
-- Nội bộ: 30 ảnh thật + bbox YOLO từ ZIP; chia 20 dev/10 holdout, sinh 130 biến thể từ 10 holdout; seed 42. GT fixture chính thức vẫn chưa có.
+- Nội bộ: 30 ảnh thật + bbox YOLO từ ZIP; chia 20 dev/10 holdout, sinh 130 biến thể từ 10 holdout; seed 42. Ảnh: 30 frame BDD100K (chỉ nghiên cứu/học tập).
 - Positive = unusable theo rule đã chốt: severity 2, glare trên bbox, hoặc erase nhưng nhãn còn.
 - Primary: Transform QC F1, join chính xác bằng `image_id`; báo precision, recall và lỗi erase.
 - **Nói:** “Không lấy ảnh biến thể cùng parent làm các mẫu độc lập khi tính bất định.”
 
 ## Slide 3 — Quality gate và human review
 
-- PoC so ảnh với ảnh cha; đo sáng, tương phản, Laplacian; dò glare theo bbox và vùng erase.
+- Pipeline tự sinh biến thể từ 20 ảnh dev và ghi `transform_manifest.csv` (seed, tâm glare, sha256 cha/con): provenance 1.0.
+- PoC v2 so ảnh với ảnh cha: sáng/tương phản, ước lượng bán kính blur, tâm glare so với bbox, thay đổi tập trung trong bbox (erase).
 - Baseline chỉ dùng Laplacian/độ tối toàn ảnh.
 - M5 ưu tiên top-10, contact sheet offline, nhận override và ghi audit log.
 - **Nói:** “QC tự động đưa ra tín hiệu; HOLD khi thiếu provenance giúp tránh release ảnh không truy xuất được.”
 
 ## Slide 4 — Bằng chứng, giới hạn và bước kế tiếp
 
-- Tests M6: 4 test file `tests/test_t03.py` pass; full suite hiện có 17 failure do hash manifest và strict provenance.
-- **F1 nội bộ:** baseline 0.5567 → PoC 0.7619 (130 ảnh); bảng do src.compare sinh.
-- PoC bỏ lọt 10 blur severity 2 và 10 erase; ví dụ g0011/g0012 trên parent orig_05. Ngưỡng blur quá chặt; inpainting không tạo bbox đồng màu như detector giả định.
-- Pipeline **HOLD** vì manifest provenance rỗng; chưa có human review hay đánh giá thời tiết thật.
-- **Nói:** “Bước kế tiếp là xử lý lỗi trên dev độc lập, hoàn thiện provenance và đánh giá mới; không đổi ngưỡng trên chính bộ heldout vừa chấm.”
+- `python -m pytest -q`: 55 passed, 0 failed trên checkout sạch; một lệnh `python -m src.main ... --offline --seed 42` chạy hết 5 bước.
+- **F1 nội bộ (130 ảnh heldout):** baseline 0.5567 → PoC v1 0.7619 → **PoC v2 1.0000**; bảng do src.compare sinh, ablation cho thấy mỗi kiểm tra đều đóng góp.
+- Hai failure mode bắt buộc đã gặp thật và sửa: erase bằng inpainting bị lọt 10/10 (v1); manifest provenance rỗng → HOLD. Sau sửa: 0 erase lọt, completeness 1.0.
+- Quyết định chạy mặc định: **REWORK** — 25/45 ảnh holdout unusable (55.6% > 30%): lô biến thể quá nặng, cần sinh lại nhẹ hơn.
+- **Nói:** “F1 = 1.0 là trên biến đổi synthetic do chính nhóm sinh; nó chưa chứng minh gì với thời tiết thật. Bước tiếp theo là thử motion blur, lens flare, sương mù thật.”
 
 ## Kịch bản phản biện nhanh
 
@@ -36,10 +37,10 @@
 **Đáp:** Đây là benchmark nội bộ: bbox GT của nhóm kết hợp phép biến đổi biết trước sinh nhãn usability. GT hidden fixture vẫn do giảng viên giữ; hai bộ không được gộp.
 
 **Hỏi:** Ngưỡng đã tối ưu chưa?  
-**Đáp:** Ngưỡng config giữ nguyên trước và sau benchmark; kết quả blur/erase cho thấy cần thử lại trên dev độc lập. Không dùng bộ vừa chấm để tune rồi báo lại như holdout mới.
+**Đáp:** Ngưỡng v2 chỉ chọn trên 20 ảnh dev và ghi vào config trước khi chạy heldout. Heldout đã được xem ở v1 nên nhóm nói rõ điều đó trong report; không coi F1 = 1.0 là bảo đảm.
 
 **Hỏi:** Tại sao cần reviewer nếu có quality gate?  
 **Đáp:** Rule ảnh có thể miss glare/erase ngoài các giả định đã mã hóa. Queue và audit lưu lại override, còn thiếu provenance thì HOLD.
 
 **Hỏi:** Có thể đưa lên ảnh camera thật không?  
-**Đáp:** Đã chạy trên ảnh gốc thật nhưng nhiễu/thời tiết vẫn synthetic. Cần xác nhận license, review bbox và kiểm trên thời tiết tự nhiên/downstream trước khi cân nhắc triển khai.
+**Đáp:** Đã chạy trên ảnh gốc thật nhưng nhiễu/thời tiết vẫn synthetic. Cần review bbox, kiểm trên thời tiết tự nhiên/downstream trước khi cân nhắc triển khai; BDD100K không cho dùng thương mại.

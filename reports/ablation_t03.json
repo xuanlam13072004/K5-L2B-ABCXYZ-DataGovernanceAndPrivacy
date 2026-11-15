@@ -1,0 +1,96 @@
+[
+  {
+    "variant": "full",
+    "gold_set": "team_holdout",
+    "n": 130,
+    "f1": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "missed_erase": 0.0,
+    "slice_f1": {
+      "blur": 1.0,
+      "erase": 1.0,
+      "fog": 1.0,
+      "glare": 1.0,
+      "night": 1.0
+    },
+    "thresholds_override": {}
+  },
+  {
+    "variant": "no_erase_check",
+    "gold_set": "team_holdout",
+    "n": 130,
+    "f1": 0.8936170212765957,
+    "precision": 1.0,
+    "recall": 0.8076923076923077,
+    "missed_erase": 10.0,
+    "slice_f1": {
+      "blur": 1.0,
+      "erase": 0.0,
+      "fog": 1.0,
+      "glare": 1.0,
+      "night": 1.0
+    },
+    "thresholds_override": {
+      "erase_max_std": -1,
+      "erase_min_inside_mad": 1000000000.0
+    }
+  },
+  {
+    "variant": "no_glare_box_check",
+    "gold_set": "team_holdout",
+    "n": 130,
+    "f1": 0.9803921568627451,
+    "precision": 1.0,
+    "recall": 0.9615384615384616,
+    "missed_erase": 0.0,
+    "slice_f1": {
+      "blur": 1.0,
+      "erase": 1.0,
+      "fog": 1.0,
+      "glare": 0.9090909090909091,
+      "night": 1.0
+    },
+    "thresholds_override": {
+      "glare_sev1_strength": 99
+    }
+  },
+  {
+    "variant": "no_blur_check",
+    "gold_set": "team_holdout",
+    "n": 130,
+    "f1": 0.8936170212765957,
+    "precision": 1.0,
+    "recall": 0.8076923076923077,
+    "missed_erase": 0.0,
+    "slice_f1": {
+      "blur": 0.0,
+      "erase": 1.0,
+      "fog": 1.0,
+      "glare": 1.0,
+      "night": 1.0
+    },
+    "thresholds_override": {
+      "blur_sev1_lap_ratio": -1
+    }
+  },
+  {
+    "variant": "no_night_check",
+    "gold_set": "team_holdout",
+    "n": 130,
+    "f1": 0.8936170212765957,
+    "precision": 1.0,
+    "recall": 0.8076923076923077,
+    "missed_erase": 0.0,
+    "slice_f1": {
+      "blur": 1.0,
+      "erase": 1.0,
+      "fog": 1.0,
+      "glare": 1.0,
+      "night": 0.0
+    },
+    "thresholds_override": {
+      "night_sev1_mean_ratio": -1
+    }
+  }
+]

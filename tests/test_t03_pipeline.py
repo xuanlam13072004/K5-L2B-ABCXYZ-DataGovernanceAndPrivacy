@@ -1,5 +1,7 @@
 """T03 wiring tests (Lead). They must stay green after every merge.
 
+The wiring tests run on the small instructor sample (fixtures/t03_synthetic, 320x180) to stay fast;
+test_t03_default_config_runs_on_team_images checks the real default: the team's 30 images (data/t03_real).
 Member 6 adds algorithm tests (glare on object, erase detection, ...) in tests/test_t03.py.
 """
 import json
@@ -8,7 +10,8 @@ import pandas as pd
 
 from src import main as runner
 
-CMD = ["--config", "configs/lab.yaml", "--track", "t03", "--offline", "--seed", "42", "--run-name", "poc"]
+CMD = ["--config", "configs/lab.yaml", "--track", "t03", "--offline", "--seed", "42", "--run-name", "poc",
+       "--input", "fixtures/t03_synthetic"]
 
 
 def _run(out):
@@ -51,3 +54,18 @@ def test_t03_review_without_reviewer_fails_clearly(tmp_path):
     assert _run(tmp_path) == 0
     _reviewed(tmp_path, "")                               # decision with no reviewer name
     assert _run(tmp_path) == 2
+
+
+def test_t03_default_config_runs_on_team_images(tmp_path):
+    out = tmp_path / "real"
+    assert runner.main(["--config", "configs/lab.yaml", "--offline", "--seed", "42", "--run-name", "poc",
+                        "--output", str(out)]) == 0
+    holdout = pd.read_csv("data/t03_real/holdout_transformed.csv")
+    qc = pd.read_csv(out / "qc.csv")
+    assert set(qc.image_id) == set(holdout.image_id)
+    manifest = pd.read_csv(out / "transform_manifest.csv")
+    required = ["image_id", "parent_image", "transform", "severity", "seed"]
+    assert len(manifest) > 0 and manifest[required].notna().all().all()      # provenance completeness = 100%
+    assert set(manifest.parent_image) <= set(pd.read_csv("data/t03_real/originals.csv").query("split == 'dev'").image_id)
+    gold = pd.read_csv(out / "dev_gold.csv", keep_default_na=False)
+    assert set(gold.image_id) == set(manifest.image_id) and gold.unusable.isin([0, 1]).all()

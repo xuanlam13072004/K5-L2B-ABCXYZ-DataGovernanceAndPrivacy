@@ -1,4 +1,6 @@
 # BẢNG PHÂN CÔNG VAI TRÒ & KẾ HOẠCH TRIỂN KHAI TRACK T03 (SYNTHETIC-VS-REAL)
+
+> **Bản kế hoạch ban đầu.** Phân công thực tế cuối cùng (ai sở hữu file nào, commit nào) xem `reports/team_contributions.csv`. Khác biệt chính: không thành viên nào sửa `src/main.py`, `src/common/*` hạ tầng hay `fixtures/`; code của từng người nằm trong `src/t03/`.
 **Dự án:** Field-to-Release PoC (AI20K · Data Track)  
 **Quy mô nhóm:** 6 thành viên  
 **Track:** T03 · Synthetic-vs-Real: Tạo và kiểm dữ liệu khó  

@@ -11,11 +11,11 @@
 | Positive | `unusable = 1` theo `fixtures/t03_synthetic/README_usability_rule.md` |
 | Công thức | TP: GT unusable và dự đoán 1; FP: GT usable, dự đoán 1; FN: GT unusable, dự đoán 0. Precision = TP/(TP+FP), recall = TP/(TP+FN), F1 = 2TP/(2TP+FP+FN). Khi mẫu số metric bằng 0, evaluator trả `None` nếu không xác định được metric. |
 | Ghép prediction ↔ GT | Join chính xác trên `image_id`; ID lặp trong `qc.csv` làm evaluator thất bại. Prediction thiếu bị tính là usable (0), theo evaluator. |
-| Candidate pool | Chính thức: 45 ID fixture (chưa có GT overlay). Benchmark nội bộ: 130 ID trong `out/member6/gold/team_holdout/holdout_transformed.csv`, từ 10 ảnh holdout nguồn nhóm; không lọc theo score. |
+| Candidate pool | Pipeline mặc định: 45 ID trong `data/t03_real/holdout_transformed.csv` (ảnh nhóm, không kèm đáp án); fixture giảng viên chỉ để tham khảo. Benchmark nội bộ: 130 ID trong `out/member6/gold/team_holdout/holdout_transformed.csv`, từ 10 ảnh holdout nguồn nhóm; không lọc theo score. |
 | Review budget | B = 10 ảnh nghi ngờ cao nhất cho HITL; B không thay đổi primary metric. |
 | Seed | 42 |
-| Threshold policy | Dùng nguyên `params.thresholds` trong `configs/lab.yaml` và mặc định `src/t03/qc.py`; không điều chỉnh sau khi xem benchmark. Chưa xác nhận các ngưỡng đã được tune trên dev độc lập. |
-| Eval split | Nội bộ: importer chia 30 ảnh nhóm thành 20 dev/10 holdout bằng seed 42; chỉ 10 holdout sinh 130 biến thể. Chính thức: 45 fixture holdout, chưa chấm. Không dùng các split này chọn ngưỡng. |
+| Threshold policy | v1 (14/11): ngưỡng của M4, chưa tune trên dev độc lập. v2 (15/11): 4 ngưỡng mới (`blur_sev1_lap_ratio` 0.30, `blur_sev2_radius_px` 3.5, `erase_min_inside_mad` 8.0, `erase_min_change_ratio` 20.0) chỉ chọn trên team_dev = 20 ảnh dev × 13 biến thể (`tools.make_gold_set --split dev`), ghi vào `configs/lab.yaml` trước khi chạy heldout. Heldout đã được xem ở v1 (biết loại lỗi), xem report mục 05. |
+| Eval split | Nội bộ: importer chia 30 ảnh nhóm thành 20 dev/10 holdout bằng seed 42; chỉ 10 holdout sinh 130 biến thể. Fixture giảng viên chỉ để tham khảo. Không dùng heldout chọn ngưỡng. |
 | Chỉ số lỗi xấu | Missed label-invalidating edits (đặc biệt `erase`); đồng thời báo precision/recall để thể hiện false alarm và false reject. |
 | Slices | `transform` và `severity` theo GT sinh độc lập, ghi trong `reports/t03_benchmark_details.md`; evaluator chuẩn xuất transform slices. |
 | Bất định khi N nhỏ | Đã bootstrap theo cụm `parent_image`, 2.000 lần, seed 42, CI95 trong chi tiết benchmark. Biến thể cùng parent không xem là độc lập; CI không đo bias chọn mẫu hoặc sim-to-real. |

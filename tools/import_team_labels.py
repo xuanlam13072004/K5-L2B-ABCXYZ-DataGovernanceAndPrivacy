@@ -35,8 +35,8 @@ from src.common.image_ops import load_rgb  # noqa: E402
 
 CLASS_MAP = {"car": "car", "truck": "car", "bus": "car", "person": "pedestrian",
              "stop sign": "sign", "traffic light": "sign"}
-SOURCE = "team G01 dashcam images (data/image) + CVAT YOLO 1.1 labels (data/obj_train_data.zip)"
-LICENSE = "TODO: ghi nguon goc + giay phep cua 30 anh (vd. BDD100K licence: non-commercial research)"
+SOURCE = "30 BDD100K dashcam frames selected by team G01 (data/image) + CVAT YOLO 1.1 labels (data/obj_train_data.zip)"
+LICENSE = "BDD100K License - non-commercial research/education only (https://doc.bdd100k.com/license.html)"
 
 
 def _iou(a, b) -> float:
@@ -81,8 +81,9 @@ def main(argv=None) -> int:
     order = np.random.default_rng(a.seed).permutation(len(stems))
     holdout = {stems[i] for i in order[: a.n_holdout]}
 
-    if out.exists():
-        shutil.rmtree(out)
+    for sub in ("originals", "holdout_transformed"):   # clear only what this script generates
+        if (out / sub).exists():
+            shutil.rmtree(out / sub)
     (out / "originals").mkdir(parents=True)
     originals, objects, fixes, source = [], [], [], []
     for k, stem in enumerate(stems):
