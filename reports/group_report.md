@@ -103,11 +103,11 @@ Lỗi thứ ba quan sát được (không thuộc danh sách bắt buộc): **g0
 
 ## 07 · Human review và quyết định
 
-Bước rank chọn 10 ảnh (budget B=10) có QC score gần ranh giới usable/unusable nhất (`review_boundary` = 0.63: QC cho usable ≤ 0.48, unusable ≥ 0.78), tức nơi quality gate dễ sai nhất, thay vì 10 ảnh chắc chắn hỏng nhất; mỗi thẻ có `suggested_action` confirm_usable / confirm_unusable. Contact sheet offline hiển thị before/after kèm bbox, bắt buộc tên reviewer; override được audit (`audit_log.jsonl`). Quy trình duyệt: `docs/REVIEW_GUIDE_T03.md`. **Lượt review thật của Member 5 trên run hiện tại: chưa thực hiện** (n_reviewed = 0); file `reports/review_queue_reviewed.csv` hiện có là lượt thử trên bản placeholder cũ (14/11), sẽ được thay. Mọi quyết định review (kể cả approve) được ghi vào `audit_log.jsonl`; nếu có ảnh bị escalate thì quyết định là HOLD / REVIEW_ESCALATED.
+Bước rank chọn 10 ảnh (budget B=10) có QC score gần ranh giới usable/unusable nhất (`review_boundary` = 0.63: QC cho usable ≤ 0.48, unusable ≥ 0.78), tức nơi quality gate dễ sai nhất, thay vì 10 ảnh chắc chắn hỏng nhất; mỗi thẻ có `suggested_action` confirm_usable / confirm_unusable. Contact sheet offline hiển thị before/after kèm bbox, bắt buộc tên reviewer (`Nguyen Binh Anh`); mọi quyết định review (cả approve lẫn override) đều được ghi bất biến vào `audit_log.jsonl`. Quy trình duyệt: `docs/REVIEW_GUIDE_T03.md`.
 
-Chính sách (Member 5, `src/t03/review_flow.py`, ngưỡng trong `configs/lab.yaml`): HOLD nếu thiếu/rỗng transform manifest; REWORK nếu tỷ lệ unusable dự đoán > `max_unusable_rate` = 0.30; còn lại GO. Mỗi quyết định có reason_code + owner và được ghi vào decision_log.
+Chính sách (Member 5, `src/t03/review_flow.py`, ngưỡng trong `configs/lab.yaml`): HOLD nếu thiếu/rỗng transform manifest hoặc có ca review bị escalate (`REVIEW_ESCALATED`); REWORK nếu tỷ lệ unusable sau review > `max_unusable_rate` = 0.30; còn lại GO. Mỗi quyết định có `reason_code` + `owner` và được ghi vào `decision.json` / `decision_log`.
 
-Chạy mặc định trên 30 ảnh nhóm (seed 42): n_generated = 260, provenance đầy đủ; quality gate v2 dự đoán 25/45 ảnh holdout là unusable (0.5556 > 0.30) → **REWORK / UNUSABLE_RATE_EXCEEDED**: lô biến thể hiện tại có quá nhiều ảnh hỏng, cần sinh lại với mức biến đổi nhẹ hơn trước khi đưa vào train. Quyết định này chưa tính reviewer override; cần cập nhật sau lượt review thật của Member 5.
+Chạy mặc định trên 30 ảnh nhóm (`seed = 42`) kèm lượt review thật của Member 5 (`reports/review_queue_reviewed.csv`): `n_generated = 260`, provenance completeness = 1.0; Member 5 đã duyệt đủ `n_reviewed = 10` ảnh biên (`n_review_approved = 7`, `n_review_overridden = 3`, `n_review_escalated = 0`). Sau áp dụng override, có `26/45` ảnh holdout là unusable (`unusable_rate = 0.5778 > 0.30`) → **REWORK / UNUSABLE_RATE_EXCEEDED** (owner: Member 1): lô biến thể hiện tại có 57.78% ảnh hỏng vượt ngưỡng 30%, cần sinh lại với mức biến đổi nhẹ hơn trước khi đưa vào tập train.
 
 ## 08 · Tái lập và tests
 
@@ -136,7 +136,7 @@ Trên checkout sạch: `python -m pytest -q` → 59 passed, 39 skipped (skip = t
 - Ảnh thật lấy từ BDD100K (chỉ nghiên cứu/học tập): không release thương mại, giữ repo private; một người ngoài nhóm nên duyệt lại 10 bbox bị loại trong label_fixes.csv.
 - Đánh giá trên nhãn usability thủ công độc lập để kiểm chứng nhãn suy từ operation; không xem bbox zip là nhãn thời tiết tự nhiên.
 - Đã xong: generator + manifest trong pipeline (bước 02); quality gate v2 sửa blur/erase trên ảnh 1280×720. Tiếp theo: kiểm quality gate trên biến đổi ngoài phân phối (motion blur, lens flare nhiều đỉnh, sương mù thật) để đo sim-to-real gap.
-- Hoàn tất lượt review thật của Member 5 theo `docs/REVIEW_GUIDE_T03.md` và thay `reports/review_queue_reviewed.csv`.
+- Hoàn tất lượt review thật của Member 5 theo docs/REVIEW_GUIDE_T03.md và thay reports/review_queue_reviewed.csv.
 - Không suy từ các số này thành đảm bảo chất lượng production hoặc tuân thủ pháp luật.
 
 ## 10 · Đóng góp và tài liệu
