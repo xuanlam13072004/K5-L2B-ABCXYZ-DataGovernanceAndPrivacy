@@ -103,7 +103,7 @@ Lỗi thứ ba quan sát được (không thuộc danh sách bắt buộc): **g0
 
 ## 07 · Human review và quyết định
 
-Bước rank chọn 10 ảnh (budget B=10) có QC score gần ranh giới usable/unusable nhất (`review_boundary` = 0.63: QC cho usable ≤ 0.48, unusable ≥ 0.78), tức nơi quality gate dễ sai nhất, thay vì 10 ảnh chắc chắn hỏng nhất; mỗi thẻ có `suggested_action` confirm_usable / confirm_unusable. Contact sheet offline hiển thị before/after kèm bbox, bắt buộc tên reviewer; override được audit (`audit_log.jsonl`). Quy trình duyệt: `docs/REVIEW_GUIDE_T03.md`. **Lượt review thật của Member 5 trên run hiện tại: chưa thực hiện** (n_reviewed = 0); file `reports/review_queue_reviewed.csv` hiện có là lượt thử trên bản placeholder cũ (14/11), sẽ được thay.
+Bước rank chọn 10 ảnh (budget B=10) có QC score gần ranh giới usable/unusable nhất (`review_boundary` = 0.63: QC cho usable ≤ 0.48, unusable ≥ 0.78), tức nơi quality gate dễ sai nhất, thay vì 10 ảnh chắc chắn hỏng nhất; mỗi thẻ có `suggested_action` confirm_usable / confirm_unusable. Contact sheet offline hiển thị before/after kèm bbox, bắt buộc tên reviewer; override được audit (`audit_log.jsonl`). Quy trình duyệt: `docs/REVIEW_GUIDE_T03.md`. **Lượt review thật của Member 5 trên run hiện tại: chưa thực hiện** (n_reviewed = 0); file `reports/review_queue_reviewed.csv` hiện có là lượt thử trên bản placeholder cũ (14/11), sẽ được thay. Mọi quyết định review (kể cả approve) được ghi vào `audit_log.jsonl`; nếu có ảnh bị escalate thì quyết định là HOLD / REVIEW_ESCALATED.
 
 Chính sách (Member 5, `src/t03/review_flow.py`, ngưỡng trong `configs/lab.yaml`): HOLD nếu thiếu/rỗng transform manifest; REWORK nếu tỷ lệ unusable dự đoán > `max_unusable_rate` = 0.30; còn lại GO. Mỗi quyết định có reason_code + owner và được ghi vào decision_log.
 
@@ -129,14 +129,14 @@ Windows/Python 3.13.14. Dùng -X utf8 cho compare vì console cp1258 không in �
 
 Pipeline mặc định (30 ảnh nhóm): `python -m src.main --config configs/lab.yaml --output out/poc --run-name poc --offline --seed 42` → exit 0; lần đầu tự tạo `data/t03_real` từ `data/image` + `data/obj_train_data.zip`. Ablation: `python -m tools.ablation_t03`.
 
-Trên checkout sạch: `python -m pytest -q` → 55 passed, 39 skipped (skip = test cần GT ẩn của giảng viên), gồm 4 test của M6 (`tests/test_t03.py`) và 4 test wiring (`tests/test_t03_pipeline.py`: E2E + tái lập cùng seed, override được audit, thiếu reviewer → exit 2, chạy mặc định trên 30 ảnh với provenance đầy đủ). Lỗi 17 test trước đây chỉ xảy ra trên working tree Windows bị đổi xuống dòng (xem mục 02).
+Trên checkout sạch: `python -m pytest -q` → 59 passed, 39 skipped (skip = test cần GT ẩn của giảng viên), gồm 4 test của M6 (`tests/test_t03.py`), 6 test wiring (`tests/test_t03_pipeline.py`: E2E + tái lập cùng seed, override được audit, mọi quyết định review được audit, escalate → HOLD, thiếu reviewer → exit 2, chạy mặc định trên 30 ảnh với provenance đầy đủ) và 2 test quality gate v2 (`tests/test_t03_qc_v2.py`: erase inpainting, blur theo bán kính). Lỗi 17 test trước đây chỉ xảy ra trên working tree Windows bị đổi xuống dòng (xem mục 02).
 
 ## 09 · Giới hạn và cải tiến
 
 - Ảnh thật lấy từ BDD100K (chỉ nghiên cứu/học tập): không release thương mại, giữ repo private; một người ngoài nhóm nên duyệt lại 10 bbox bị loại trong label_fixes.csv.
 - Đánh giá trên nhãn usability thủ công độc lập để kiểm chứng nhãn suy từ operation; không xem bbox zip là nhãn thời tiết tự nhiên.
 - Đã xong: generator + manifest trong pipeline (bước 02); quality gate v2 sửa blur/erase trên ảnh 1280×720. Tiếp theo: kiểm quality gate trên biến đổi ngoài phân phối (motion blur, lens flare nhiều đỉnh, sương mù thật) để đo sim-to-real gap.
-- Bổ sung human review có người chịu trách nhiệm và audit; hiện mới có queue, chưa có xác nhận của reviewer cho benchmark.
+- Hoàn tất lượt review thật của Member 5 theo `docs/REVIEW_GUIDE_T03.md` và thay `reports/review_queue_reviewed.csv`.
 - Không suy từ các số này thành đảm bảo chất lượng production hoặc tuân thủ pháp luật.
 
 ## 10 · Đóng góp và tài liệu

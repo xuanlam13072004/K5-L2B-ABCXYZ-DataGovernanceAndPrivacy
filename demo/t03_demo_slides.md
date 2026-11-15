@@ -19,12 +19,12 @@
 - Pipeline tự sinh biến thể từ 20 ảnh dev và ghi `transform_manifest.csv` (seed, tâm glare, sha256 cha/con): provenance 1.0.
 - PoC v2 so ảnh với ảnh cha: sáng/tương phản, ước lượng bán kính blur, tâm glare so với bbox, thay đổi tập trung trong bbox (erase).
 - Baseline chỉ dùng Laplacian/độ tối toàn ảnh.
-- M5 ưu tiên top-10, contact sheet offline, nhận override và ghi audit log.
+- Review top-10 ảnh QC phân vân nhất trên contact sheet offline; mọi quyết định (kể cả approve) vào audit log; escalate → HOLD.
 - **Nói:** “QC tự động đưa ra tín hiệu; HOLD khi thiếu provenance giúp tránh release ảnh không truy xuất được.”
 
 ## Slide 4 — Bằng chứng, giới hạn và bước kế tiếp
 
-- `python -m pytest -q`: 55 passed, 0 failed trên checkout sạch; một lệnh `python -m src.main ... --offline --seed 42` chạy hết 5 bước.
+- `python -m pytest -q`: 59 passed, 0 failed trên checkout sạch; một lệnh `python -m src.main ... --offline --seed 42` chạy hết 5 bước.
 - **F1 nội bộ (130 ảnh heldout):** baseline 0.5567 → PoC v1 0.7619 → **PoC v2 1.0000**; bảng do src.compare sinh, ablation cho thấy mỗi kiểm tra đều đóng góp.
 - Hai failure mode bắt buộc đã gặp thật và sửa: erase bằng inpainting bị lọt 10/10 (v1); manifest provenance rỗng → HOLD. Sau sửa: 0 erase lọt, completeness 1.0.
 - Quyết định chạy mặc định: **REWORK** — 25/45 ảnh holdout unusable (55.6% > 30%): lô biến thể quá nặng, cần sinh lại nhẹ hơn.

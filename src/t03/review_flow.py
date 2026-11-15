@@ -53,6 +53,16 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
         return scored
     reviewed = load_review_decisions(reviewed_path)        # fails loudly if a decision has no reviewer
     ctx.stats["n_reviewed"] = len(reviewed)
+    decisions = reviewed.reviewer_decision.str.strip()
+    ctx.stats["n_review_approved"] = int((decisions == "approve").sum())
+    ctx.stats["n_review_overridden"] = int(decisions.isin(["edit", "reject"]).sum())
+    ctx.stats["n_review_escalated"] = int((decisions == "escalate").sum())
+    pred = scored.set_index("image_id").pred_unusable
+    for r in reviewed[~decisions.isin(["edit", "reject"])].itertuples(index=False):
+        # apply_overrides only audits overrides; agreeing or escalating is a decision too, so audit it here
+        p_val = int(pred.get(r.item_id, -1))
+        ctx.audit.log(actor=r.reviewer, action=f"review:{r.reviewer_decision}", item_id=r.item_id, before=p_val,
+                      after=p_val, reason=r.review_note, reviewed_at=r.reviewed_at)
     overrides = reviewed[reviewed.reviewer_decision.isin(["edit", "reject"]) & (reviewed.override_value.str.strip() != "")]
     bad = sorted(set(overrides.override_value.str.strip()) - {"0", "1"})
     if bad:
@@ -68,7 +78,7 @@ def review(ctx: RunContext, scored: pd.DataFrame, queue: pd.DataFrame) -> pd.Dat
 def decide(ctx: RunContext, final: pd.DataFrame, data: dict) -> Decision:
     """Release policy (Member 5, ported from commit 9bb095c). Thresholds live in configs/lab.yaml -> params.
 
-    HOLD   if no holdout image was scored, or the provenance record is missing or empty
+    HOLD   if no holdout image was scored, a reviewer escalated an image, or the provenance record is missing or empty
     REWORK if the predicted unusable rate exceeds max_unusable_rate
     GO     otherwise
     """
@@ -79,6 +89,9 @@ def decide(ctx: RunContext, final: pd.DataFrame, data: dict) -> Decision:
     manifest = ctx.output_dir / "transform_manifest.csv"
     metrics = {"n_holdout": n, "unusable_count": int(final.pred_unusable.sum()), "unusable_rate": round(rate, 4),
                "max_unusable_rate": max_rate, "n_reviewed": ctx.stats.get("n_reviewed", 0),
+               "n_review_approved": ctx.stats.get("n_review_approved", 0),
+               "n_review_overridden": ctx.stats.get("n_review_overridden", 0),
+               "n_review_escalated": ctx.stats.get("n_review_escalated", 0),
                "n_generated": ctx.stats.get("n_generated", 0)}
     reviewed = ctx.output_dir / "review_queue_reviewed.csv"
     evidence = [str(ctx.out("qc.csv")), str(manifest)] + ([str(reviewed)] if reviewed.exists() else [])
@@ -86,6 +99,10 @@ def decide(ctx: RunContext, final: pd.DataFrame, data: dict) -> Decision:
     if n == 0:
         return Decision(status="HOLD", reason_code="NO_HOLDOUT_IMAGES",
                         reason="No holdout image was scored: nothing supports a release decision.",
+                        owner=owner, scope="t03 holdout_transformed", evidence=evidence, metrics=metrics)
+    if metrics["n_review_escalated"] > 0:
+        return Decision(status="HOLD", reason_code="REVIEW_ESCALATED",
+                        reason=f"{metrics['n_review_escalated']} reviewed image(s) escalated: a second reviewer must decide first.",
                         owner=owner, scope="t03 holdout_transformed", evidence=evidence, metrics=metrics)
     if not manifest.exists() or metrics["n_generated"] == 0:
         return Decision(status="HOLD", reason_code="MISSING_PROVENANCE_MANIFEST",

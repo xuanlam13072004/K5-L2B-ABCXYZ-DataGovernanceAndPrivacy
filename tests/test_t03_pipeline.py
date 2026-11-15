@@ -69,3 +69,28 @@ def test_t03_default_config_runs_on_team_images(tmp_path):
     assert set(manifest.parent_image) <= set(pd.read_csv("data/t03_real/originals.csv").query("split == 'dev'").image_id)
     gold = pd.read_csv(out / "dev_gold.csv", keep_default_na=False)
     assert set(gold.image_id) == set(manifest.image_id) and gold.unusable.isin([0, 1]).all()
+
+
+def _review_all(out, decision, reviewer="Tester"):
+    q = pd.read_csv(out / "review_queue.csv", dtype=str).fillna("")
+    q["reviewer"], q["reviewer_decision"], q["review_note"] = reviewer, decision, "test"
+    q.to_csv(out / "review_queue_reviewed.csv", index=False)
+    return q
+
+
+def test_t03_every_review_decision_is_audited(tmp_path):
+    assert _run(tmp_path) == 0
+    q = _review_all(tmp_path, "approve")
+    assert _run(tmp_path) == 0
+    events = [json.loads(line) for line in (tmp_path / "audit_log.jsonl").read_text().splitlines()]
+    approved = {e["item_id"] for e in events if e["action"] == "review:approve" and e["actor"] == "Tester"}
+    assert approved == set(q.item_id)
+    assert json.loads((tmp_path / "decision.json").read_text())["metrics"]["n_review_approved"] == len(q)
+
+
+def test_t03_escalated_review_holds_the_release(tmp_path):
+    assert _run(tmp_path) == 0
+    _review_all(tmp_path, "escalate")
+    assert _run(tmp_path) == 0
+    d = json.loads((tmp_path / "decision.json").read_text())
+    assert d["status"] == "HOLD" and d["reason_code"] == "REVIEW_ESCALATED"
